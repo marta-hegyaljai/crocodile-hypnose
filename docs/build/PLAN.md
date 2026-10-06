@@ -60,7 +60,7 @@ We don't know yet which auth system MHP Coaching uses. So:
 | S03 Onboarding | DONE | 2026-10-07, review r2 + QA r2 + design r1 PASS (`docs/build/reviews/step-03-*`) |
 | S04 Home and river map | DONE | 2026-10-07, review r2 + QA r1 + design r1 PASS (`docs/build/reviews/step-04-*`) |
 | S05 Sessions | IN PROGRESS | |
-| S06 Mini-games | TODO | |
+| S06 Mini-games | DONE | 2026-10-07, review r2 + QA r1 (M1 fixed, re-checked r2) + design r1 PASS (`docs/build/reviews/step-06-*`) |
 | S07 Gamification | TODO | |
 | S08 Profile and settings | TODO | |
 | S09 Release polish | TODO | |

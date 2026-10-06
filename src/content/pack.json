@@ -80,7 +80,7 @@
       "type": "game",
       "titleKey": "stops.intro.s3",
       "durationSec": 120,
-      "mediaRef": "pack:intro-3",
+      "mediaRef": "game:breathing",
       "unlock": "previous",
       "cautionSafe": true
     },
@@ -124,7 +124,7 @@
       "type": "game",
       "titleKey": "stops.intro.s7",
       "durationSec": 180,
-      "mediaRef": "pack:intro-7",
+      "mediaRef": "game:stillness",
       "unlock": "previous",
       "cautionSafe": true
     },
@@ -181,7 +181,7 @@
       "type": "game",
       "titleKey": "stops.sleep.s3",
       "durationSec": 180,
-      "mediaRef": "pack:sleep-3",
+      "mediaRef": "game:stillness",
       "unlock": "previous",
       "cautionSafe": true,
       "timeOfDay": "any"
@@ -229,7 +229,7 @@
       "type": "game",
       "titleKey": "stops.sleep.s7",
       "durationSec": 180,
-      "mediaRef": "pack:sleep-7",
+      "mediaRef": "game:firefly",
       "unlock": "previous",
       "cautionSafe": true,
       "timeOfDay": "evening"

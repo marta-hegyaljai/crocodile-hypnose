@@ -59,9 +59,68 @@ export const en = {
     habits: ph('Habits'), // PLACEHOLDER
   },
   games: {
-    stillness: ph('Stillness'), // PLACEHOLDER
-    firefly: ph('Firefly'), // PLACEHOLDER
-    breathing: ph('Breathing'), // PLACEHOLDER
+    titles: {
+      stillness: ph('Stillness'), // PLACEHOLDER
+      firefly: ph('Firefly'), // PLACEHOLDER
+      breathing: ph('Breathing'), // PLACEHOLDER
+    },
+    howTo: {
+      stillness: ph(
+        '[Stillness how-to: hold still; the stiller you are, the lower the croc sinks]',
+      ), // PLACEHOLDER
+      firefly: ph('[Firefly how-to: follow the firefly with your eyes, three slow rounds]'), // PLACEHOLDER
+      breathing: ph('[Breathing how-to: hold the water to breathe in, let go to breathe out]'), // PLACEHOLDER
+    },
+    skill: {
+      stillness: ph('[Skill taught: stillness]'), // PLACEHOLDER
+      firefly: ph('[Skill taught: eye fixation]'), // PLACEHOLDER
+      breathing: ph('[Skill taught: slow breathing]'), // PLACEHOLDER
+    },
+    clearing: {
+      title: 'Games',
+      body: ph('[Games clearing intro]'), // PLACEHOLDER
+      best: 'Best: {result}',
+      plays: 'Played {n} times',
+      playsOne: 'Played once',
+      neverPlayed: 'Not played yet',
+      a11yCard: '{title}, {duration}, {plays}',
+    },
+    shell: {
+      start: 'Start',
+      pause: 'Pause',
+      paused: 'Paused',
+      resume: 'Keep going',
+      quit: 'Leave the game',
+      quitNote: 'You can leave any time. Nothing is lost.',
+      back: 'Back',
+      endTitle: ph('[Game finished]'), // PLACEHOLDER
+      eyesClosed: ph('[Invitation: now try it once more with your eyes closed]'), // PLACEHOLDER
+      playAgain: 'Play again',
+      done: 'Done',
+      notFound: 'This game is not available.',
+      a11yStage: '{title} game',
+    },
+    result: {
+      stillness: '{n}/100 still',
+      firefly: '{n} of {total} rounds',
+      breathing: '{n} breaths',
+      breathingOne: '1 breath',
+    },
+    stillness: {
+      restFinger: ph('[Rest a finger on the lily pad and keep it still]'), // PLACEHOLDER
+      holdPhone: ph('[Hold your phone still]'), // PLACEHOLDER
+      a11yPad: 'Lily pad. Rest a finger here and keep it still.',
+    },
+    firefly: {
+      round: 'Round {n} of {total}',
+      follow: ph('[Follow the firefly with your eyes]'), // PLACEHOLDER
+      closeEyes: ph('[Now close your eyes for a moment]'), // PLACEHOLDER
+    },
+    breathing: {
+      holdIn: ph('Hold: breathe in'), // PLACEHOLDER
+      releaseOut: ph('Let go: breathe out'), // PLACEHOLDER
+      a11yWater: 'The water. Press and hold to breathe in, release to breathe out.',
+    },
   },
   mood: {
     question: ph('[Mood question]'), // PLACEHOLDER
