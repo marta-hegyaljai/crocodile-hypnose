@@ -3,6 +3,7 @@ import React from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import HomeScreen from '@/app/(app)/home';
+import ProfileTab from '@/app/(app)/profile';
 import ForgotPasswordScreen from '@/app/(auth)/forgot-password';
 import ResetPasswordScreen from '@/app/(auth)/reset-password';
 import SignInScreen from '@/app/(auth)/sign-in';
@@ -32,6 +33,7 @@ jest.mock('expo-router', () => ({
     canGoBack: jest.fn(() => true),
   },
   useLocalSearchParams: () => mockParams,
+  useIsFocused: () => true,
 }));
 const mockRouter = jest.requireMock<{ router: Record<string, jest.Mock> }>('expo-router').router;
 
@@ -344,13 +346,14 @@ describe('home', () => {
       .signUp({ email: 'ann@example.com', password: 'secret12', displayName: 'Ann' });
   });
 
-  it('greets by name, celebrates a new account once, and signs out', async () => {
+  it('greets by name; the profile tab shows the account and signs out', async () => {
     await show(HomeScreen);
     expect(screen.getByTestId('home-greeting')).toHaveTextContent('Hi, Ann');
-    expect(screen.getByTestId('home-celebrate')).toBeOnTheScreen();
-    // Acknowledged straight away, so a reload or a second visit does not celebrate again.
-    expect(store.getState().justSignedUp).toBe(false);
-    await press('home-sign-out');
+    expect(screen.getByTestId('today-title')).toHaveTextContent('Intro · Stop 1');
+    await screen.unmount();
+    await show(ProfileTab);
+    expect(screen.getByTestId('profile-email')).toHaveTextContent(/ann@example.com/);
+    await press('profile-sign-out');
     await waitFor(() => expect(store.getState().status).toBe('signedOut'));
   });
 
@@ -362,12 +365,12 @@ describe('home', () => {
   });
 
   it('deletes the account only after the in-page confirmation', async () => {
-    await show(HomeScreen);
-    await press('home-delete-account');
+    await show(ProfileTab);
+    await press('profile-delete-account');
     expect(client.calls.deleteAccount).toBe(0);
     await press('delete-cancel');
     expect(screen.queryByTestId('delete-confirm')).toBeNull();
-    await press('home-delete-account');
+    await press('profile-delete-account');
     await press('delete-confirm-button');
     await waitFor(() =>
       expect(store.getState()).toMatchObject({ status: 'signedOut', notice: 'accountDeleted' }),
@@ -376,8 +379,8 @@ describe('home', () => {
   });
 
   it('a failed deletion explains why and keeps you signed in', async () => {
-    await show(HomeScreen);
-    await press('home-delete-account');
+    await show(ProfileTab);
+    await press('profile-delete-account');
     client.failNext(new AuthError('offline'));
     await press('delete-confirm-button');
     await waitFor(() =>

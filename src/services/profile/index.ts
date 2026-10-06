@@ -13,6 +13,7 @@ export {
   isSyncProblem,
   ONBOARDING_KEY,
   SETTINGS_KEY,
+  PROGRESS_KEY,
   type ProfileState,
   type ProfileStore,
   type ProfileStatus,

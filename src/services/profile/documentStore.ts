@@ -247,7 +247,10 @@ export function createDocumentStore<T extends SyncedDocument>(
       async update(change) {
         const { userId, doc } = get();
         if (!userId) return;
-        const next = { ...change(doc), updatedAt: Math.max(now(), doc.updatedAt + 1) };
+        const changed = change(doc);
+        // Nothing to write (e.g. finishing a stop that is already finished).
+        if (changed === doc) return;
+        const next = { ...changed, updatedAt: Math.max(now(), doc.updatedAt + 1) };
         set({
           doc: next,
           dirty: true,

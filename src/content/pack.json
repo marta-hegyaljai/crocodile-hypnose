@@ -1,0 +1,274 @@
+{
+  "version": 1,
+  "zones": [
+    {
+      "id": "intro",
+      "order": 1,
+      "titleKey": "zones.intro",
+      "entry": {
+        "kind": "open"
+      }
+    },
+    {
+      "id": "sleep",
+      "order": 2,
+      "titleKey": "zones.sleep",
+      "entry": {
+        "kind": "open"
+      }
+    },
+    {
+      "id": "stress",
+      "order": 3,
+      "titleKey": "zones.stress",
+      "entry": {
+        "kind": "comingSoon"
+      }
+    },
+    {
+      "id": "confidence",
+      "order": 4,
+      "titleKey": "zones.confidence",
+      "entry": {
+        "kind": "comingSoon"
+      }
+    },
+    {
+      "id": "focus",
+      "order": 5,
+      "titleKey": "zones.focus",
+      "entry": {
+        "kind": "comingSoon"
+      }
+    },
+    {
+      "id": "habits",
+      "order": 6,
+      "titleKey": "zones.habits",
+      "entry": {
+        "kind": "comingSoon"
+      }
+    }
+  ],
+  "stops": [
+    {
+      "id": "intro-1",
+      "zoneId": "intro",
+      "order": 1,
+      "type": "video",
+      "titleKey": "stops.intro.s1",
+      "durationSec": 240,
+      "mediaRef": "pack:intro-1",
+      "unlock": "previous",
+      "cautionSafe": true
+    },
+    {
+      "id": "intro-2",
+      "zoneId": "intro",
+      "order": 2,
+      "type": "audio",
+      "titleKey": "stops.intro.s2",
+      "durationSec": 180,
+      "mediaRef": "pack:intro-2",
+      "unlock": "previous",
+      "cautionSafe": true
+    },
+    {
+      "id": "intro-3",
+      "zoneId": "intro",
+      "order": 3,
+      "type": "game",
+      "titleKey": "stops.intro.s3",
+      "durationSec": 120,
+      "mediaRef": "pack:intro-3",
+      "unlock": "previous",
+      "cautionSafe": true
+    },
+    {
+      "id": "intro-4",
+      "zoneId": "intro",
+      "order": 4,
+      "type": "visual",
+      "titleKey": "stops.intro.s4",
+      "durationSec": 180,
+      "mediaRef": "pack:intro-4",
+      "unlock": "previous",
+      "cautionSafe": true
+    },
+    {
+      "id": "intro-5",
+      "zoneId": "intro",
+      "order": 5,
+      "type": "video",
+      "titleKey": "stops.intro.s5",
+      "durationSec": 300,
+      "mediaRef": "pack:intro-5",
+      "unlock": "previous",
+      "cautionSafe": true
+    },
+    {
+      "id": "intro-6",
+      "zoneId": "intro",
+      "order": 6,
+      "type": "audio",
+      "titleKey": "stops.intro.s6",
+      "durationSec": 600,
+      "mediaRef": "pack:intro-6",
+      "unlock": "previous",
+      "cautionSafe": false
+    },
+    {
+      "id": "intro-7",
+      "zoneId": "intro",
+      "order": 7,
+      "type": "game",
+      "titleKey": "stops.intro.s7",
+      "durationSec": 180,
+      "mediaRef": "pack:intro-7",
+      "unlock": "previous",
+      "cautionSafe": true
+    },
+    {
+      "id": "intro-8",
+      "zoneId": "intro",
+      "order": 8,
+      "type": "visual",
+      "titleKey": "stops.intro.s8",
+      "durationSec": 240,
+      "mediaRef": "pack:intro-8",
+      "unlock": "previous",
+      "cautionSafe": true
+    },
+    {
+      "id": "intro-9",
+      "zoneId": "intro",
+      "order": 9,
+      "type": "longTrance",
+      "titleKey": "stops.intro.s9",
+      "durationSec": 1200,
+      "mediaRef": "pack:intro-9",
+      "unlock": "previous",
+      "cautionSafe": false
+    },
+    {
+      "id": "sleep-1",
+      "zoneId": "sleep",
+      "order": 1,
+      "type": "video",
+      "titleKey": "stops.sleep.s1",
+      "durationSec": 300,
+      "mediaRef": "pack:sleep-1",
+      "unlock": "previous",
+      "cautionSafe": true,
+      "timeOfDay": "any"
+    },
+    {
+      "id": "sleep-2",
+      "zoneId": "sleep",
+      "order": 2,
+      "type": "audio",
+      "titleKey": "stops.sleep.s2",
+      "durationSec": 600,
+      "mediaRef": "pack:sleep-2",
+      "unlock": "previous",
+      "cautionSafe": true,
+      "timeOfDay": "evening"
+    },
+    {
+      "id": "sleep-3",
+      "zoneId": "sleep",
+      "order": 3,
+      "type": "game",
+      "titleKey": "stops.sleep.s3",
+      "durationSec": 180,
+      "mediaRef": "pack:sleep-3",
+      "unlock": "previous",
+      "cautionSafe": true,
+      "timeOfDay": "any"
+    },
+    {
+      "id": "sleep-4",
+      "zoneId": "sleep",
+      "order": 4,
+      "type": "visual",
+      "titleKey": "stops.sleep.s4",
+      "durationSec": 240,
+      "mediaRef": "pack:sleep-4",
+      "unlock": "previous",
+      "cautionSafe": true,
+      "timeOfDay": "evening"
+    },
+    {
+      "id": "sleep-5",
+      "zoneId": "sleep",
+      "order": 5,
+      "type": "audio",
+      "titleKey": "stops.sleep.s5",
+      "durationSec": 720,
+      "mediaRef": "pack:sleep-5",
+      "unlock": "previous",
+      "cautionSafe": false,
+      "timeOfDay": "evening"
+    },
+    {
+      "id": "sleep-6",
+      "zoneId": "sleep",
+      "order": 6,
+      "type": "video",
+      "titleKey": "stops.sleep.s6",
+      "durationSec": 240,
+      "mediaRef": "pack:sleep-6",
+      "unlock": "previous",
+      "cautionSafe": true,
+      "timeOfDay": "any"
+    },
+    {
+      "id": "sleep-7",
+      "zoneId": "sleep",
+      "order": 7,
+      "type": "game",
+      "titleKey": "stops.sleep.s7",
+      "durationSec": 180,
+      "mediaRef": "pack:sleep-7",
+      "unlock": "previous",
+      "cautionSafe": true,
+      "timeOfDay": "evening"
+    },
+    {
+      "id": "sleep-8",
+      "zoneId": "sleep",
+      "order": 8,
+      "type": "audio",
+      "titleKey": "stops.sleep.s8",
+      "durationSec": 900,
+      "mediaRef": "pack:sleep-8",
+      "unlock": "previous",
+      "cautionSafe": true,
+      "timeOfDay": "evening"
+    },
+    {
+      "id": "sleep-9",
+      "zoneId": "sleep",
+      "order": 9,
+      "type": "visual",
+      "titleKey": "stops.sleep.s9",
+      "durationSec": 300,
+      "mediaRef": "pack:sleep-9",
+      "unlock": "previous",
+      "cautionSafe": true,
+      "timeOfDay": "evening"
+    },
+    {
+      "id": "sleep-10",
+      "zoneId": "sleep",
+      "order": 10,
+      "type": "longTrance",
+      "titleKey": "stops.sleep.s10",
+      "durationSec": 1200,
+      "mediaRef": "pack:sleep-10",
+      "unlock": "previous",
+      "cautionSafe": false,
+      "timeOfDay": "evening"
+    }
+  ]
+}

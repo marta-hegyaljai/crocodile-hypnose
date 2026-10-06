@@ -155,8 +155,89 @@ export const en = {
     greeting: ph('Hi, {name}'), // PLACEHOLDER
     signedInAs: 'Signed in as {email}',
     accountCreated: 'Account created',
-    comingSoon: ph('[Home screen: coming in a later step]'), // PLACEHOLDER
     signOut: 'Sign out',
+    today: {
+      label: ph('[Today]'), // PLACEHOLDER
+      labelResume: ph('[Continue]'), // PLACEHOLDER
+      labelReplay: ph('[Play again]'), // PLACEHOLDER
+      meta: '{zone} · {duration} {type}',
+      play: 'Play {title}',
+      empty: ph('[No session available]'), // PLACEHOLDER
+    },
+    syncPending: 'Saved on this device. It syncs when you are back online.',
+  },
+  stops: {
+    intro: {
+      s1: ph('Intro · Stop 1'), // PLACEHOLDER
+      s2: ph('Intro · Stop 2'), // PLACEHOLDER
+      s3: ph('Intro · Stop 3'), // PLACEHOLDER
+      s4: ph('Intro · Stop 4'), // PLACEHOLDER
+      s5: ph('Intro · Stop 5'), // PLACEHOLDER
+      s6: ph('Intro · Stop 6'), // PLACEHOLDER
+      s7: ph('Intro · Stop 7'), // PLACEHOLDER
+      s8: ph('Intro · Stop 8'), // PLACEHOLDER
+      s9: ph('Intro · Stop 9'), // PLACEHOLDER
+    },
+    sleep: {
+      s1: ph('Sleep · Stop 1'), // PLACEHOLDER
+      s2: ph('Sleep · Stop 2'), // PLACEHOLDER
+      s3: ph('Sleep · Stop 3'), // PLACEHOLDER
+      s4: ph('Sleep · Stop 4'), // PLACEHOLDER
+      s5: ph('Sleep · Stop 5'), // PLACEHOLDER
+      s6: ph('Sleep · Stop 6'), // PLACEHOLDER
+      s7: ph('Sleep · Stop 7'), // PLACEHOLDER
+      s8: ph('Sleep · Stop 8'), // PLACEHOLDER
+      s9: ph('Sleep · Stop 9'), // PLACEHOLDER
+      s10: ph('Sleep · Stop 10'), // PLACEHOLDER
+    },
+  },
+  stopTypes: {
+    video: 'Video',
+    audio: 'Audio',
+    visual: 'Visual',
+    game: 'Game',
+    longTrance: ph('Long trance'), // PLACEHOLDER
+  },
+  duration: {
+    minutes: '{n} min',
+  },
+  map: {
+    a11y: 'River map',
+    zoneProgress: '{done}/{total}',
+    zoneProgressA11y: '{zone}: {done} of {total} done',
+    zoneComingSoon: '{zone}: coming soon',
+    zoneLocked: '{zone}: locked',
+    status: {
+      locked: 'Locked',
+      available: 'Ready',
+      inProgress: 'Started',
+      done: 'Done',
+      caution: 'Not suggested for you',
+    },
+    stopA11y: '{title}, {type}, {duration}, {status}',
+    current: 'You are here',
+    sheet: {
+      start: 'Start',
+      resume: 'Continue',
+      replay: 'Play again',
+      lockedPrevious: 'Finish {title} first to unlock this stop.',
+      lockedZone: 'Finish {zone} first to open this part of the river.',
+      lockedComingSoon: 'This part of the river is coming soon.',
+      caution: ph('[Caution mode: why this stop is not suggested]'), // PLACEHOLDER
+      done: 'You finished this stop. You can play it again any time.',
+    },
+  },
+  session: {
+    placeholder: ph('[Session player: coming in step 5]'), // PLACEHOLDER
+    back: 'Back to the river',
+    completeDev: 'Complete (dev)',
+    notFound: 'This session is not available.',
+    meta: '{type} · {duration}',
+  },
+  tabsPlaceholder: {
+    croc: ph('[Croc habitat: coming in step 7]'), // PLACEHOLDER
+    games: ph('[Games: coming in step 6]'), // PLACEHOLDER
+    profile: ph('[Profile and settings: coming in step 8]'), // PLACEHOLDER
   },
   account: {
     delete: 'Delete account',
@@ -307,6 +388,7 @@ export const en = {
     back: 'Back',
     selected: 'Selected',
     onboardingProgress: 'Onboarding progress: step {index} of {total}',
+    weeklyGoal: 'Weekly goal: {done} of {total}',
   },
 } as const;
 

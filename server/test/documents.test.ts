@@ -307,7 +307,7 @@ describe('GET/PUT /me/settings', () => {
   });
 
   test('an unknown document kind is not found', async () => {
-    const res = await get('progress');
+    const res = await get('croc-diary');
     assert.equal(res.statusCode, 404);
   });
 
@@ -318,5 +318,76 @@ describe('GET/PUT /me/settings', () => {
       headers: { origin: 'http://localhost:4173', 'access-control-request-method': 'PUT' },
     });
     assert.match(String(res.headers['access-control-allow-methods']), /PUT/);
+  });
+});
+
+describe('GET/PUT /me/progress', () => {
+  const at = () => ctx.clock.now;
+  const done = (t: number, completedAt = t) => ({ status: 'done', updatedAt: t, completedAt });
+  const started = (t: number) => ({ status: 'inProgress', updatedAt: t, completedAt: null });
+  const progress = (stops: Record<string, unknown>, updatedAt = at()) => ({
+    version: 1,
+    updatedAt,
+    stops,
+  });
+  const stopsOf = async () =>
+    (await get('progress')).json<{ progress: { stops: Record<string, unknown> } }>().progress.stops;
+
+  test('starts empty, stores and reads back', async () => {
+    assert.deepEqual((await get('progress')).json(), { progress: null });
+    const doc = progress({ 'intro-1': done(at()), 'intro-2': started(at()) });
+    const res = await put('progress', doc);
+    assert.equal(res.statusCode, 200);
+    assert.deepEqual(res.json<DocBody>().progress, { ...doc, storedAt: at() });
+  });
+
+  test('merges per stop: a stale copy never undoes a finished stop', async () => {
+    await put('progress', progress({ 'intro-1': done(at() - 1000), 'intro-2': done(at()) }));
+    // A stale device, newer document timestamp, knows intro-2 only as started.
+    const stale = progress({ 'intro-2': started(at() + 10), 'intro-3': started(at()) }, at() + 50);
+    const res = await put('progress', stale);
+    assert.deepEqual(res.json<DocBody>().progress?.stops, {
+      'intro-1': done(at() - 1000),
+      'intro-2': done(at()),
+      'intro-3': started(at()),
+    });
+  });
+
+  test('keeps the first completion time; newer unfinished records win', async () => {
+    await put('progress', progress({ 'sleep-1': done(at(), at() - 500), 'sleep-2': started(1) }));
+    await put('progress', progress({ 'sleep-1': done(at() + 5, at()), 'sleep-2': started(2) }));
+    assert.deepEqual(await stopsOf(), {
+      'sleep-1': done(at() + 5, at() - 500),
+      'sleep-2': started(2),
+    });
+  });
+
+  test('is idempotent: the same write twice stores the same thing', async () => {
+    const doc = progress({ 'intro-1': done(at()) });
+    const first = (await put('progress', doc)).json<DocBody>().progress;
+    const second = (await put('progress', doc)).json<DocBody>().progress;
+    assert.deepEqual(first?.stops, second?.stops);
+    assert.equal(first?.updatedAt, second?.updatedAt);
+  });
+
+  test('rejects bad stop ids, statuses and inconsistent records', async () => {
+    for (const stops of [
+      { 'Intro 1': done(at()) },
+      { 'intro-1': { status: 'skipped', updatedAt: 1, completedAt: null } },
+      { 'intro-1': { status: 'done', updatedAt: 1, completedAt: null } },
+      { 'intro-1': { status: 'inProgress', updatedAt: 1, completedAt: 1 } },
+      { 'intro-1': { ...done(at()), extra: true } },
+    ]) {
+      const res = await put('progress', progress(stops));
+      assert.equal(res.statusCode, 400, JSON.stringify(stops));
+    }
+    assert.deepEqual((await get('progress')).json(), { progress: null });
+  });
+
+  test('is per user', async () => {
+    await put('progress', progress({ 'intro-1': done(at()) }));
+    const other = (await signUp(ctx, { email: 'other@example.com' })).json<AuthBody>().tokens
+      .accessToken;
+    assert.deepEqual((await get('progress', other)).json(), { progress: null });
   });
 });

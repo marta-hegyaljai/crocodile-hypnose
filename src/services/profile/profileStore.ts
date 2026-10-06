@@ -5,6 +5,9 @@ import type { SessionManager } from '@/services/auth/sessionManager';
 import type { KeyValueStorage } from '@/services/auth/storage';
 import { isAuthError } from '@/services/auth/types';
 
+import { mergeProgress } from '@/services/progress/mergeProgress';
+import { defaultProgress, isProgressDoc, type ProgressDoc } from '@/services/progress/types';
+
 import { createDocumentStore, type DocumentState } from './documentStore';
 import { mergeOnboarding } from './mergeOnboarding';
 import type { ProfileClient } from './profileClient';
@@ -28,6 +31,8 @@ export interface ProfileState {
   userId: string | null;
   onboarding: OnboardingDoc;
   settings: SettingsDoc;
+  /** Progress along the river (started and finished stops). */
+  progress: ProgressDoc;
   /** Any document has a change the server has not confirmed. */
   dirty: boolean;
   /** The last sync failure, if the latest attempt failed. */
@@ -39,6 +44,8 @@ export interface ProfileState {
   load(userId: string, options?: { fresh?: boolean }): Promise<void>;
   updateOnboarding(change: (doc: OnboardingDoc) => OnboardingDoc): Promise<void>;
   updateSettings(change: (doc: SettingsDoc) => SettingsDoc): Promise<void>;
+  /** Applies a progress change (see `markStarted` / `markDone`); returning the same doc is a no-op. */
+  updateProgress(change: (doc: ProgressDoc) => ProgressDoc): Promise<void>;
   /** Asks the server now: pending reads first, then pending writes (e.g. when back online). */
   flush(): Promise<void>;
   /** Forgets everything, including the device copies (they hold health data). */
@@ -58,6 +65,7 @@ export interface ProfileStoreOptions {
 
 export const ONBOARDING_KEY = 'mhp.hypnose.onboarding.v1';
 export const SETTINGS_KEY = 'mhp.hypnose.settings.v1';
+export const PROGRESS_KEY = 'mhp.hypnose.progress.v1';
 
 /**
  * The signed-in user's documents, as one store for screens. Each document is its own synced
@@ -95,29 +103,46 @@ export function createProfileStore({
     debounceMs,
     retryMs,
   });
-  const docs = [onboarding, settings] as const;
+  // Progress merges per stop (finished never regresses), on the device and on the server.
+  const progress = createDocumentStore<ProgressDoc>({
+    key: PROGRESS_KEY,
+    storage,
+    defaults: () => defaultProgress(),
+    validate: isProgressDoc,
+    fetch: () => withToken((token) => client.get('progress', token)),
+    push: (_user, doc) => withToken((token) => client.put('progress', doc, token)),
+    merge: mergeProgress,
+    now,
+    debounceMs,
+    retryMs,
+  });
+  const docs = [onboarding, settings, progress] as const;
   let generation = 0;
 
   const store = createStore<ProfileState>()((set, get) => {
     const mirror = () => {
       const o = onboarding.getState();
       const s = settings.getState();
+      const p = progress.getState();
       set({
         onboarding: o.doc,
         settings: s.doc,
-        dirty: o.dirty || s.dirty,
-        syncError: o.syncError ?? s.syncError ?? null,
+        progress: p.doc,
+        dirty: o.dirty || s.dirty || p.dirty,
+        syncError: o.syncError ?? s.syncError ?? p.syncError ?? null,
         loadError: get().status === 'loading' ? (o.syncError ?? null) : null,
       });
     };
     onboarding.subscribe(mirror);
     settings.subscribe(mirror);
+    progress.subscribe(mirror);
 
     return {
       status: 'idle',
       userId: null,
       onboarding: defaultOnboarding(),
       settings: defaultSettings(),
+      progress: defaultProgress(),
       dirty: false,
       syncError: null,
       loadError: null,
@@ -141,6 +166,7 @@ export function createProfileStore({
 
       updateOnboarding: (change) => onboarding.getState().update(change),
       updateSettings: (change) => settings.getState().update(change),
+      updateProgress: (change) => progress.getState().update(change),
 
       async flush() {
         await Promise.all(docs.map((d) => d.getState().flush()));
