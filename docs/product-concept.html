@@ -1,0 +1,855 @@
+<meta charset="utf-8">
+<title>MHP Hypnose Concept</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito+Sans:opsz,wght@6..12,400;6..12,600;6..12,700&display=swap">
+<style>
+/* Layout: one editorial column (max 1040px) with a dark river hero; app mockups sit in a wrapping phone grid. */
+:root {
+  /* page theme (light = river mist) */
+  --bg: #EEF3EC;
+  --surface: #F8FBF6;
+  --fg: #13251E;
+  --muted: #4B5F56;
+  --line: #CCDACF;
+  --accent: #17635F;
+  --accent-2: #9A5F0C;
+  --chip: #DCEAE0;
+
+  /* app palette (fixed: these are the app's own colours, the same in both page themes) */
+  --a-jungle: #0E2E24;
+  --a-croc: #3F6B35;
+  --a-croc-dk: #24452A;
+  --a-river: #1D6E6A;
+  --a-river-lt: #7CC4B5;
+  --a-amber: #F2A93B;
+  --a-lotus: #EE8FA6;
+  --a-mist: #E7F0E6;
+  --a-mud: #8A6A43;
+  --a-night: #08171A;
+  --a-ink: #10201B;
+
+  --f-display: "Baloo 2", "Trebuchet MS", system-ui, sans-serif;
+  --f-body: "Nunito Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+
+  --step--1: 0.875rem;
+  --step-0: 1rem;
+  --step-1: 1.2rem;
+  --step-2: 1.6rem;
+  --step-3: 2.2rem;
+  --step-4: clamp(2.4rem, 6vw, 3.8rem);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0B1915; --surface: #10231D; --fg: #E2ECE5; --muted: #9DB3A8;
+    --line: #22392F; --accent: #7CC4B5; --accent-2: #F2A93B; --chip: #183229;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0B1915; --surface: #10231D; --fg: #E2ECE5; --muted: #9DB3A8;
+  --line: #22392F; --accent: #7CC4B5; --accent-2: #F2A93B; --chip: #183229;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--fg);
+  font-family: var(--f-body); font-size: var(--step-0); line-height: 1.6;
+}
+.wrap { max-width: 1040px; margin-inline: auto; padding-inline: 20px; }
+h1, h2, h3 { font-family: var(--f-display); line-height: 1.1; text-wrap: balance; margin: 0; }
+h2 { font-size: var(--step-3); font-weight: 700; }
+h3 { font-size: var(--step-1); font-weight: 700; }
+p { margin: 0; }
+.prose { max-width: 66ch; }
+.eyebrow { font-size: 0.78rem; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 700; color: var(--accent); }
+.muted { color: var(--muted); }
+a { color: var(--accent); }
+:focus-visible { outline: 3px solid var(--accent-2); outline-offset: 2px; }
+
+/* hero */
+.hero { background: radial-gradient(120% 90% at 80% 0%, #1A4A3B 0%, var(--a-jungle) 60%); color: #EAF3EC; overflow: hidden; }
+.hero .wrap { padding-block: 56px 8px; display: grid; gap: 18px; }
+.hero .eyebrow { color: var(--a-river-lt); }
+.hero h1 { font-size: var(--step-4); font-weight: 800; letter-spacing: -0.01em; }
+.hero h1 em { font-style: normal; color: var(--a-amber); }
+.hero p { max-width: 60ch; font-size: var(--step-1); color: #C8DCCF; line-height: 1.5; }
+.hero-meta { display: flex; flex-wrap: wrap; gap: 8px; font-size: 0.85rem; }
+.hero-meta span { border: 1px solid #2D5A49; border-radius: 999px; padding: 3px 12px; color: #B5CFC1; }
+.hero-river { display: block; width: 100%; height: 160px; margin-top: 8px; }
+
+main section { padding-block: 56px; border-top: 1px solid var(--line); }
+main section:first-child { border-top: 0; }
+.sec-head { display: grid; gap: 10px; margin-bottom: 28px; }
+
+/* idea */
+.idea { display: grid; grid-template-columns: 1.3fr 1fr; gap: 32px; align-items: start; }
+.idea > * { min-width: 0; }
+.idea p + p { margin-top: 14px; }
+.pull { font-family: var(--f-display); font-size: var(--step-2); line-height: 1.2; color: var(--accent); font-weight: 600; }
+.fact { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 20px; display: grid; gap: 8px; }
+.fact strong { font-family: var(--f-display); font-size: var(--step-1); }
+
+/* generic grids */
+.grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); }
+.grid > * { min-width: 0; }
+.tile { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 18px; display: grid; gap: 6px; align-content: start; }
+.tile .tag { justify-self: start; font-size: 0.72rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; background: var(--chip); color: var(--accent); padding: 2px 10px; border-radius: 999px; }
+.tile p { color: var(--muted); font-size: 0.95rem; }
+
+.principles { display: grid; gap: 0; counter-reset: p; }
+.principles li { list-style: none; display: grid; grid-template-columns: 180px 1fr; gap: 20px; padding-block: 16px; border-top: 1px dashed var(--line); }
+.principles li:first-child { border-top: 0; }
+.principles b { font-family: var(--f-display); font-size: var(--step-1); line-height: 1.2; }
+.principles span { color: var(--muted); }
+.principles, .steps { padding: 0; margin: 0; }
+
+/* phones */
+.phones { display: grid; gap: 32px 20px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 820px) { .phones { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 540px) { .phones { grid-template-columns: 1fr; } }
+.phone-card { display: grid; gap: 12px; justify-items: center; align-content: start; }
+.phone-card figcaption { text-align: center; max-width: 30ch; font-size: 0.9rem; color: var(--muted); }
+.phone-card figcaption b { display: block; color: var(--fg); font-family: var(--f-display); font-size: 1.05rem; }
+figure { margin: 0; }
+.phone {
+  width: 100%; max-width: 256px; aspect-ratio: 9 / 18.5; border-radius: 34px;
+  border: 7px solid var(--a-ink); overflow: hidden; position: relative;
+  box-shadow: 0 18px 40px -18px rgba(8, 23, 26, .55);
+  font-family: var(--f-body); font-size: 11px; line-height: 1.35;
+  display: flex; flex-direction: column;
+}
+.phone .notch { position: absolute; top: 6px; left: 50%; translate: -50% 0; width: 70px; height: 18px; background: var(--a-ink); border-radius: 12px; z-index: 3; }
+.status { display: flex; justify-content: space-between; padding: 8px 18px 0; font-weight: 700; font-size: 10px; height: 26px; }
+.disp { font-family: var(--f-display); }
+.ph { border: 1px dashed rgba(242, 169, 59, .85); background: rgba(242, 169, 59, .14); border-radius: 4px; padding: 0 4px; font-style: normal; }
+.btn3d { display: block; text-align: center; font-family: var(--f-display); font-weight: 700; font-size: 13px; border-radius: 14px; padding: 9px 10px 7px; }
+.btn-amber { background: var(--a-amber); color: #3A2205; box-shadow: 0 4px 0 #B87515; }
+.btn-ghost { border: 2px solid rgba(231, 240, 230, .35); color: #E7F0E6; }
+.btn-green { background: var(--a-croc); color: #F2F7EF; box-shadow: 0 4px 0 var(--a-croc-dk); }
+
+/* screen: welcome */
+.s-welcome { background: linear-gradient(180deg, var(--a-jungle) 0%, #134238 55%, var(--a-river) 100%); color: #E7F0E6; }
+.s-welcome .body { flex: 1; display: flex; flex-direction: column; padding: 10px 18px 18px; gap: 10px; }
+.s-welcome .logo { margin-top: 26px; text-align: center; }
+.s-welcome .logo h4 { font-family: var(--f-display); font-size: 24px; margin: 4px 0 0; font-weight: 800; }
+.s-welcome .logo p { color: var(--a-river-lt); font-size: 12px; }
+.s-welcome .spacer { flex: 1; }
+.s-welcome .fine { text-align: center; font-size: 9.5px; color: #B9D4C8; }
+
+/* screen: river */
+.s-river { background: var(--a-mist); color: var(--a-ink); }
+.s-river .top { background: var(--a-jungle); color: #E7F0E6; padding: 0 0 12px; }
+.s-river .stats { display: flex; align-items: center; gap: 6px; padding: 4px 14px 0; }
+.av { width: 30px; height: 30px; border-radius: 50%; background: var(--a-river); display: grid; place-items: center; border: 2px solid var(--a-amber); }
+.chip { display: inline-flex; align-items: center; gap: 4px; background: rgba(255,255,255,.1); border-radius: 999px; padding: 3px 8px; font-weight: 700; font-size: 10px; }
+.chip i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+.s-river .hello { padding: 8px 14px 0; font-family: var(--f-display); font-size: 16px; font-weight: 700; }
+.today { margin: -2px 12px 0; background: #fff; border-radius: 16px; padding: 10px 12px; display: flex; gap: 10px; align-items: center; box-shadow: 0 3px 0 #C9D9CB; position: relative; top: 8px; }
+.today .t { flex: 1; min-width: 0; }
+.today small { color: var(--a-river); font-weight: 700; font-size: 9px; letter-spacing: .08em; text-transform: uppercase; }
+.today b { display: block; font-family: var(--f-display); font-size: 14px; }
+.play { width: 36px; height: 36px; border-radius: 50%; background: var(--a-amber); box-shadow: 0 3px 0 #B87515; display: grid; place-items: center; flex: none; }
+.map { flex: 1; min-height: 0; position: relative; }
+.map > svg { width: 100%; height: 100%; display: block; }
+.tabbar { display: flex; justify-content: space-around; background: #fff; padding: 7px 0 10px; border-top: 1px solid #D5E2D6; font-size: 9px; font-weight: 700; color: #6C8075; }
+.tabbar span { display: grid; justify-items: center; gap: 2px; }
+.tabbar span.on { color: var(--a-river); }
+.tabbar i { width: 16px; height: 16px; border-radius: 6px; background: currentColor; opacity: .85; display: block; }
+
+/* screen: water check */
+.s-water { background: linear-gradient(180deg, #DCEDE5 0%, var(--a-mist) 100%); color: var(--a-ink); }
+.s-water .body { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
+.s-water h4 { font-family: var(--f-display); font-size: 19px; line-height: 1.1; margin: 4px 0 0; }
+.wopt { display: flex; align-items: center; gap: 10px; background: #fff; border-radius: 14px; padding: 7px 10px; font-weight: 700; font-size: 12px; border: 2px solid transparent; }
+.wopt.sel { border-color: var(--a-river); background: #EAF6F3; }
+.wopt svg { width: 46px; height: 18px; flex: none; }
+.wopt small { margin-left: auto; font-weight: 600; color: #6C8075; font-size: 9.5px; }
+
+/* screen: dive */
+.s-dive { background: radial-gradient(90% 60% at 50% 42%, #123A33 0%, var(--a-night) 70%); color: #CFE0D7; }
+.s-dive .body { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 10px 18px 18px; text-align: center; }
+.s-dive .where { font-size: 9.5px; letter-spacing: .12em; text-transform: uppercase; color: #6F9A8C; }
+.s-dive h4 { font-family: var(--f-display); font-size: 17px; margin: 0; color: #E7F0E6; font-weight: 600; }
+.eye-wrap { position: relative; width: 170px; height: 170px; margin-top: 18px; display: grid; place-items: center; }
+.ring { position: absolute; inset: 0; border-radius: 50%; border: 1.5px solid rgba(124, 196, 181, .35); animation: ripple 7s ease-out infinite; }
+.ring:nth-child(2) { animation-delay: 2.3s; }
+.ring:nth-child(3) { animation-delay: 4.6s; }
+@keyframes ripple { from { transform: scale(.45); opacity: .9; } to { transform: scale(1.15); opacity: 0; } }
+.eye { width: 96px; height: 96px; filter: drop-shadow(0 0 22px rgba(242, 169, 59, .45)); animation: breathe 6s ease-in-out infinite; }
+@keyframes breathe { 50% { transform: scale(1.06); } }
+.s-dive .line { margin-top: 16px; font-size: 13px; font-style: italic; color: #DCE9E1; max-width: 22ch; }
+.s-dive .spacer { flex: 1; }
+.prog { width: 100%; height: 3px; background: #1E3A34; border-radius: 3px; overflow: hidden; }
+.prog i { display: block; height: 100%; width: 40%; background: var(--a-river-lt); }
+.times { width: 100%; display: flex; justify-content: space-between; font-size: 9.5px; color: #6F9A8C; margin-top: 4px; font-variant-numeric: tabular-nums; }
+.ctrls { display: flex; gap: 26px; align-items: center; margin-top: 10px; }
+.ctrls .pause { width: 44px; height: 44px; border-radius: 50%; border: 1.5px solid #3C6A5E; display: grid; place-items: center; }
+.ctrls .pause i { width: 4px; height: 14px; background: #CFE0D7; border-radius: 2px; margin: 0 2px; display: inline-block; }
+.ctrls .sm { font-size: 10px; color: #6F9A8C; }
+.dimnote { font-size: 9px; color: #4E7568; margin-top: 8px; }
+
+/* screen: firefly */
+.s-fire { background: radial-gradient(80% 50% at 50% 50%, #12352B 0%, #071410 100%); color: #CFE0D7; }
+.s-fire .body { flex: 1; position: relative; display: flex; flex-direction: column; padding: 10px 16px 16px; }
+.s-fire .hdr { display: flex; justify-content: space-between; align-items: center; font-size: 10px; color: #7FA596; }
+.s-fire h4 { font-family: var(--f-display); font-size: 16px; color: #E7F0E6; margin: 6px 0 0; font-weight: 600; text-align: center; }
+.s-fire .inst { text-align: center; font-size: 10.5px; color: #9DBDB0; }
+.field { flex: 1; position: relative; }
+.field > svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.fly { animation: drift 9s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+@keyframes drift { 0%,100% { transform: translate(0, 0); } 25% { transform: translate(30px, -26px); } 50% { transform: translate(-6px, -48px); } 75% { transform: translate(-34px, -18px); } }
+.meter { display: grid; gap: 4px; }
+.meter .row { display: flex; justify-content: space-between; font-size: 10px; font-weight: 700; color: #B9D4C8; }
+.meter .bar { height: 8px; border-radius: 6px; background: #1A3A31; overflow: hidden; }
+.meter .bar i { display: block; height: 100%; width: 86%; background: linear-gradient(90deg, var(--a-river-lt), var(--a-amber)); border-radius: 6px; }
+
+/* screen: lagoon */
+.s-lagoon { background: linear-gradient(180deg, #CBE6D8 0%, #E7F0E6 46%); color: var(--a-ink); }
+.s-lagoon .hdr { display: flex; justify-content: space-between; align-items: center; padding: 2px 14px 0; }
+.s-lagoon .hdr h4 { font-family: var(--f-display); font-size: 18px; margin: 0; }
+.s-lagoon .scene { flex: 1; min-height: 0; }
+.s-lagoon .scene > svg { width: 100%; height: 100%; display: block; }
+.card { background: #fff; margin: 0 10px 10px; border-radius: 16px; padding: 10px 12px; display: grid; gap: 6px; box-shadow: 0 3px 0 #C9D9CB; }
+.card .row { display: flex; justify-content: space-between; align-items: baseline; }
+.card b { font-family: var(--f-display); font-size: 14px; }
+.card small { color: #5D7368; font-size: 9.5px; }
+.xp { height: 9px; background: #E2ECE3; border-radius: 6px; overflow: hidden; }
+.xp i { display: block; height: 100%; width: 72%; background: var(--a-croc); border-radius: 6px; }
+.new { justify-self: start; background: #FDEFD8; color: #8A520A; font-weight: 700; font-size: 9.5px; border-radius: 999px; padding: 2px 8px; }
+
+/* loop */
+.loop { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; padding: 0; margin: 0; }
+.loop li { list-style: none; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 16px; display: grid; gap: 6px; align-content: start; position: relative; }
+.loop li .n { font-family: var(--f-display); font-weight: 800; color: var(--accent-2); font-size: 1.1rem; }
+.loop li b { font-family: var(--f-display); font-size: 1.1rem; line-height: 1.15; }
+.loop li p { font-size: 0.9rem; color: var(--muted); }
+.loop-note { margin-top: 12px; font-size: 0.9rem; color: var(--muted); }
+
+/* tables */
+.tbl { overflow-x: auto; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; min-width: 620px; font-size: 0.95rem; }
+th, td { text-align: left; padding: 12px 16px; vertical-align: top; border-top: 1px solid var(--line); }
+thead th { border-top: 0; font-size: 0.75rem; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+td:first-child { font-family: var(--f-display); font-weight: 700; font-size: 1.05rem; white-space: nowrap; }
+td .z { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 8px; vertical-align: middle; }
+td.m { color: var(--muted); }
+
+/* games */
+.games { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+.game { display: grid; grid-template-columns: 56px 1fr; gap: 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 16px; align-items: start; }
+.game > div { min-width: 0; }
+.game > svg { width: 56px; height: 56px; border-radius: 14px; }
+.game b { font-family: var(--f-display); font-size: 1.1rem; display: block; line-height: 1.2; }
+.game p { font-size: 0.92rem; color: var(--muted); margin-top: 2px; }
+.game .skill { display: inline-block; margin-top: 8px; font-size: 0.75rem; font-weight: 700; color: var(--accent); background: var(--chip); border-radius: 999px; padding: 1px 10px; }
+
+/* look & feel */
+.swatches { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+.sw { border-radius: 16px; overflow: hidden; border: 1px solid var(--line); background: var(--surface); }
+.sw .c { height: 72px; }
+.sw .l { padding: 10px 12px; display: grid; gap: 2px; }
+.sw .l b { font-family: var(--f-display); font-size: 1rem; }
+.sw .l code { font-size: 0.8rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.sw .l span { font-size: 0.82rem; color: var(--muted); line-height: 1.35; }
+
+.modes { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 28px; }
+.modes > * { min-width: 0; }
+.mode { border-radius: 20px; padding: 22px; display: grid; gap: 10px; align-content: start; }
+.mode h3 { font-size: var(--step-2); }
+.mode ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
+.mode-day { background: linear-gradient(160deg, #DDEFE3, #F4F0DA); color: #13251E; }
+.mode-day .eyebrow { color: #17635F; }
+.mode-night { background: radial-gradient(100% 80% at 70% 20%, #123A33, var(--a-night)); color: #D6E6DD; }
+.mode-night .eyebrow { color: var(--a-amber); }
+
+.type-spec { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
+.type-spec > * { min-width: 0; }
+.type-spec .tile .big { font-family: var(--f-display); font-size: 2.4rem; font-weight: 800; line-height: 1; color: var(--fg); }
+.type-spec .tile .big.body { font-family: var(--f-body); font-weight: 600; font-size: 1.6rem; }
+
+.btn-demo { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 6px; }
+.btn-demo span { font-family: var(--f-display); font-weight: 700; padding: 9px 18px 7px; border-radius: 14px; font-size: 0.95rem; }
+
+/* account diagram */
+.acct { display: grid; grid-template-columns: 1fr auto 1.1fr auto 1fr; gap: 10px; align-items: center; }
+.acct > * { min-width: 0; }
+.node { border-radius: 18px; padding: 16px; border: 1px solid var(--line); background: var(--surface); display: grid; gap: 4px; text-align: center; }
+.node b { font-family: var(--f-display); font-size: 1.15rem; }
+.node small { color: var(--muted); font-size: 0.85rem; line-height: 1.35; }
+.node.core { border: 2px solid var(--accent); background: var(--chip); }
+.arrow { font-family: var(--f-display); font-size: 1.4rem; color: var(--accent); text-align: center; }
+.req { margin-top: 24px; display: grid; gap: 10px; padding: 0; }
+.req li { list-style: none; padding-left: 26px; position: relative; }
+.req li::before { content: ""; position: absolute; left: 4px; top: 0.55em; width: 10px; height: 10px; border-radius: 50%; background: var(--accent-2); }
+.req b { font-weight: 700; }
+
+/* steps */
+.steps { display: grid; gap: 0; }
+.steps li { list-style: none; display: grid; grid-template-columns: 44px 1fr; gap: 14px; padding-block: 12px; border-top: 1px dashed var(--line); }
+.steps li:first-child { border-top: 0; }
+.steps .n { width: 34px; height: 34px; border-radius: 50%; background: var(--chip); color: var(--accent); display: grid; place-items: center; font-family: var(--f-display); font-weight: 800; }
+.steps b { font-family: var(--f-display); font-size: 1.1rem; }
+.steps p { color: var(--muted); font-size: 0.95rem; }
+
+/* roadmap */
+.road { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.phase { border-radius: 18px; padding: 20px; border: 1px solid var(--line); background: var(--surface); display: grid; gap: 10px; align-content: start; }
+.phase.mvp { border: 2px solid var(--accent); }
+.phase h3 { font-size: var(--step-2); }
+.phase ul { margin: 0; padding-left: 18px; display: grid; gap: 5px; font-size: 0.95rem; }
+
+.metrics { display: grid; gap: 0; }
+.metric { display: grid; grid-template-columns: 1fr 140px; gap: 16px; padding-block: 14px; border-top: 1px solid var(--line); align-items: baseline; }
+.metric:first-child { border-top: 0; }
+.metric b { font-family: var(--f-display); font-size: 1.1rem; display: block; }
+.metric span { color: var(--muted); font-size: 0.93rem; }
+.metric .target { font-family: var(--f-display); font-size: 1.5rem; font-weight: 700; color: var(--accent); text-align: right; font-variant-numeric: tabular-nums; }
+.metric .target small { display: block; font-family: var(--f-body); font-size: 0.75rem; color: var(--muted); font-weight: 600; }
+
+.qs { display: grid; gap: 12px; padding: 0; margin: 0; counter-reset: q; }
+.qs li { list-style: none; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px 14px 52px; position: relative; counter-increment: q; }
+.qs li::before { content: counter(q); position: absolute; left: 14px; top: 13px; width: 26px; height: 26px; border-radius: 50%; background: var(--accent-2); color: var(--bg); font-family: var(--f-display); font-weight: 800; display: grid; place-items: center; font-size: 0.9rem; }
+.qs b { font-family: var(--f-display); font-size: 1.05rem; }
+.qs p { color: var(--muted); font-size: 0.93rem; }
+
+footer { padding-block: 32px 48px; color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--line); }
+
+@media (max-width: 820px) {
+  .idea, .modes, .type-spec, .road { grid-template-columns: 1fr; }
+  .loop { grid-template-columns: 1fr 1fr; }
+  .acct { grid-template-columns: 1fr; }
+  .arrow { transform: rotate(90deg); }
+  .principles li { grid-template-columns: 1fr; gap: 4px; }
+}
+@media (max-width: 480px) {
+  .loop { grid-template-columns: 1fr; }
+  .metric { grid-template-columns: 1fr; gap: 4px; }
+  .metric .target { text-align: left; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ring, .eye, .fly, .pulse { animation: none !important; }
+}
+.pulse { animation: pulse 2.6s ease-out infinite; transform-box: fill-box; transform-origin: center; }
+@keyframes pulse { from { transform: scale(1); opacity: .7; } to { transform: scale(1.8); opacity: 0; } }
+</style>
+
+<!-- shared drawings -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <radialGradient id="eyeG" cx="50%" cy="45%" r="55%">
+      <stop offset="0" stop-color="#FFD57A"/>
+      <stop offset=".65" stop-color="#F2A93B"/>
+      <stop offset="1" stop-color="#B8701A"/>
+    </radialGradient>
+    <linearGradient id="lagoonWater" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2C8580"/>
+      <stop offset="1" stop-color="#17524F"/>
+    </linearGradient>
+  </defs>
+  <symbol id="croc" viewBox="0 0 120 64">
+    <path d="M6 45 C 14 31, 26 27, 36 28 C 38 16, 53 12, 59 23 C 72 23, 93 27, 108 34 C 116 37, 116 45, 110 45 Z" fill="#3F6B35"/>
+    <circle cx="20" cy="38" r="2.4" fill="#2E5229"/><circle cx="27" cy="34" r="2.4" fill="#2E5229"/>
+    <circle cx="66" cy="28" r="2" fill="#2E5229"/><circle cx="76" cy="29" r="2" fill="#2E5229"/><circle cx="86" cy="31" r="2" fill="#2E5229"/>
+    <ellipse cx="47" cy="23" rx="9.5" ry="8.5" fill="#4F8040"/>
+    <ellipse cx="47" cy="23" rx="6.2" ry="5.8" fill="url(#eyeG)"/>
+    <ellipse cx="47" cy="23" rx="1.4" ry="4.8" fill="#0E1A12"/>
+    <circle cx="49.2" cy="20.6" r="1.2" fill="#FFFFFF" opacity=".85"/>
+    <ellipse cx="104" cy="35" rx="3.2" ry="2.1" fill="#2E5229"/>
+    <path d="M0 45 Q 15 41 30 45 T 60 45 T 90 45 T 120 45 V64 H0 Z" style="fill: var(--cw, #1D6E6A)"/>
+    <path d="M10 53 Q 22 50 34 53" style="stroke: var(--cr, #7CC4B5)" stroke-width="1.6" fill="none" stroke-linecap="round" opacity=".8"/>
+    <path d="M70 57 Q 84 54 98 57" style="stroke: var(--cr, #7CC4B5)" stroke-width="1.6" fill="none" stroke-linecap="round" opacity=".6"/>
+  </symbol>
+  <symbol id="eye" viewBox="0 0 100 100">
+    <circle cx="50" cy="50" r="48" fill="#24452A"/>
+    <circle cx="50" cy="50" r="40" fill="url(#eyeG)"/>
+    <path d="M50 14 C 56 30, 56 70, 50 86 C 44 70, 44 30, 50 14 Z" fill="#0B140F"/>
+    <circle cx="61" cy="36" r="5" fill="#FFFFFF" opacity=".7"/>
+  </symbol>
+</svg>
+
+<header class="hero">
+  <div class="wrap">
+    <p class="eyebrow">Product concept · v0.1 · October 2026</p>
+    <h1>MHP Hypnose<br><em>product concept</em></h1>
+    <p>A crocodile-themed, gamified self-hypnosis app built on MHP's own videos, audio trances and visuals. It shares one account with the MHP Coaching app. It feels like play on the riverbank and calm under the water.</p>
+    <div class="hero-meta"><span>iOS + Android</span><span>One MHP account</span><span>Proposal for discussion</span></div>
+  </div>
+  <svg class="hero-river" viewBox="0 0 1200 160" preserveAspectRatio="xMidYMax slice" role="img" aria-label="A crocodile's eyes and snout peeking above the river">
+    <svg x="560" y="22" width="240" height="128" viewBox="0 0 120 64" style="--cw: transparent; --cr: transparent"><use href="#croc"/></svg>
+    <path d="M0 112 Q 50 104 100 112 T 200 112 T 300 112 T 400 112 T 500 112 T 600 112 T 700 112 T 800 112 T 900 112 T 1000 112 T 1100 112 T 1200 112 V160 H0 Z" fill="#1D6E6A"/>
+    <path d="M520 130 Q 560 124 600 130" stroke="#7CC4B5" stroke-width="3" fill="none" stroke-linecap="round" opacity=".7"/>
+    <path d="M760 140 Q 810 134 860 140" stroke="#7CC4B5" stroke-width="3" fill="none" stroke-linecap="round" opacity=".55"/>
+    <path d="M300 136 Q 330 132 360 136" stroke="#7CC4B5" stroke-width="2.5" fill="none" stroke-linecap="round" opacity=".4"/>
+  </svg>
+</header>
+
+<main class="wrap">
+
+<section id="idea">
+  <div class="idea">
+    <div>
+      <div class="sec-head"><p class="eyebrow">The big idea</p><h2>Everyone has an inner croc</h2></div>
+      <div class="prose">
+        <p>The oldest part of the brain is often called the "crocodile brain". It reacts fast, panics easily and can't be argued with. Self-hypnosis is how you talk to it.</p>
+        <p>Real crocodiles are also masters of stillness. They can lie motionless in the water for hours, calm but fully aware. That is the state we teach.</p>
+        <p>So the story writes itself. Each user hatches a baby crocodile. Every trance, lesson and game helps it grow, and its lagoon becomes more beautiful. Their croc is a mirror of their own calm. It never gets hungry, sad or angry when they skip a day.</p>
+      </div>
+    </div>
+    <div class="fact">
+      <p class="eyebrow">Tagline</p>
+      <p class="pull"><span class="ph">Tagline from MHP</span></p>
+      <p class="muted">The crocodile theme gives users a character to care about and gives MHP a brand that stands out next to the serious coaching app. The theme also explains the method: stillness, focus and going below the surface.</p>
+    </div>
+  </div>
+</section>
+
+<section id="who">
+  <div class="sec-head"><p class="eyebrow">Who it's for</p><h2>Three people we design for</h2></div>
+  <div class="grid">
+    <div class="tile"><span class="tag">Primary</span><h3>The coaching client</h3><p>Already uses MHP Coaching. Wants something to practise between sessions. Signs in with the account they already have, in one tap.</p></div>
+    <div class="tile"><span class="tag">Growth</span><h3>The curious newcomer</h3><p>Heard about hypnosis, a little sceptical. Finds the app in the store. Needs a fun, safe first experience and a clear path to coaching.</p></div>
+    <div class="tile"><span class="tag">Habit</span><h3>The tired night owl</h3><p>Comes for sleep or stress. Opens the app at 23:00 in bed. Needs one big button and a dark screen, nothing else.</p></div>
+  </div>
+</section>
+
+<section id="principles">
+  <div class="sec-head"><p class="eyebrow">Product principles</p><h2>Rules we use to decide</h2></div>
+  <ul class="principles">
+    <li><b>One tap to calm</b><span>From opening the app to hearing a voice should take one tap. The home screen always shows today's recommended session with a play button.</span></li>
+    <li><b>Play outside, calm inside</b><span>Gamification lives around the sessions (map, lagoon, rewards). Inside a trance there are no points, badges or pop-ups. The app switches to a dark, quiet Night River mode.</span></li>
+    <li><b>Rewards never punish</b><span>No lost streaks, no sad mascot, no guilt notifications. Stress apps that create stress fail. Weekly goals replace daily streaks.</span></li>
+    <li><b>Our content is the hero</b><span>The game is the frame. MHP's videos, voices and visuals are the picture. Every game must teach a real self-hypnosis skill.</span></li>
+    <li><b>One MHP account</b><span>The same login, profile and subscription in both apps. Signing up in either app works in the other.</span></li>
+  </ul>
+</section>
+
+<section id="screens">
+  <div class="sec-head"><p class="eyebrow">Key screens</p><h2>What it looks like</h2><p class="muted prose">Six screens that show the main journey: sign in, pick today's session, check in, go under, play, and see the croc grow. Text marked like <span class="ph">this</span> is a placeholder for MHP's own copy.</p></div>
+  <div class="phones">
+
+    <figure class="phone-card">
+      <div class="phone s-welcome">
+        <div class="notch"></div>
+        <div class="status"><span>9:41</span><span>●●●</span></div>
+        <div class="body">
+          <div class="logo">
+            <svg viewBox="0 0 120 64" width="150" height="80" aria-hidden="true" style="--cw: transparent"><use href="#croc"/></svg>
+            <h4>MHP Hypnose</h4>
+            <p><span class="ph">Tagline</span></p>
+          </div>
+          <div class="spacer"></div>
+          <span class="btn3d btn-amber">Sign in with MHP account</span>
+          <span class="btn3d btn-ghost">Create account</span>
+          <p class="fine"><span class="ph">Note about the shared MHP account</span></p>
+        </div>
+      </div>
+      <figcaption><b>Welcome</b>One login for both apps. If MHP Coaching is already signed in on this phone, we offer one-tap sign-in.</figcaption>
+    </figure>
+
+    <figure class="phone-card">
+      <div class="phone s-river">
+        <div class="notch"></div>
+        <div class="top">
+          <div class="status"><span>9:41</span><span>●●●</span></div>
+          <div class="stats">
+            <span class="av"><svg viewBox="30 8 40 30" width="22" height="18" aria-hidden="true"><use href="#croc" width="120" height="64"/></svg></span>
+            <span class="chip"><i style="background:#F2A93B"></i>240 <span class="ph">points</span></span>
+            <span class="chip"><i style="background:#7CC4B5"></i>3/5 <span class="ph">goal</span></span>
+          </div>
+          <div class="hello"><span class="ph">Greeting</span></div>
+        </div>
+        <div class="today">
+          <div class="t"><small><span class="ph">Label</span></small><b><span class="ph">Session title</span></b><span style="color:#5D7368"><span class="ph">Zone</span> · 8 min audio</span></div>
+          <span class="play"><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M3 1.5 L12 7 L3 12.5 Z" fill="#3A2205"/></svg></span>
+        </div>
+        <div class="map">
+          <svg viewBox="0 0 240 300" preserveAspectRatio="xMidYMid meet" aria-label="River map with five stops">
+            <ellipse cx="8" cy="120" rx="26" ry="44" fill="#BFD8C3"/>
+            <ellipse cx="236" cy="230" rx="28" ry="50" fill="#BFD8C3"/>
+            <ellipse cx="226" cy="40" rx="22" ry="34" fill="#CFE3D2"/>
+            <path d="M120 300 C 40 260, 40 220, 120 190 S 200 120, 120 90 S 40 30, 120 0" stroke="#9FD3C6" stroke-width="30" fill="none" stroke-linecap="round"/>
+            <path d="M120 300 C 40 260, 40 220, 120 190 S 200 120, 120 90 S 40 30, 120 0" stroke="#C7E7DF" stroke-width="3" stroke-dasharray="2 8" fill="none" stroke-linecap="round"/>
+            <g><circle cx="60" cy="241" r="13" fill="#F2A93B" stroke="#FFFFFF" stroke-width="3"/><path d="M54 241 l4 4 l8 -8" stroke="#3A2205" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></g>
+            <g><circle cx="120" cy="190" r="13" fill="#F2A93B" stroke="#FFFFFF" stroke-width="3"/><path d="M114 190 l4 4 l8 -8" stroke="#3A2205" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></g>
+            <circle class="pulse" cx="180" cy="140" r="18" fill="#F2A93B"/>
+            <circle cx="180" cy="140" r="18" fill="#FFFFFF" stroke="#F2A93B" stroke-width="4"/>
+            <path d="M175 132 L188 140 L175 148 Z" fill="#1D6E6A"/>
+            <text x="180" y="172" text-anchor="middle" font-family="Baloo 2, sans-serif" font-weight="700" font-size="11" fill="#10201B">Session title</text>
+            <circle cx="120" cy="90" r="12" fill="#D2DFD4" stroke="#FFFFFF" stroke-width="3"/>
+            <rect x="115" y="87" width="10" height="8" rx="2" fill="#8FA597"/><path d="M117 87 v-3 a3 3 0 0 1 6 0 v3" stroke="#8FA597" stroke-width="2" fill="none"/>
+            <circle cx="60" cy="45" r="17" fill="#3F6B35" stroke="#FFFFFF" stroke-width="3"/>
+            <text x="60" y="49" text-anchor="middle" font-family="Baloo 2, sans-serif" font-weight="800" font-size="10" fill="#F2F7EF">20m</text>
+            <text x="60" y="76" text-anchor="middle" font-family="Baloo 2, sans-serif" font-weight="700" font-size="10" fill="#3F6B35">Long trance</text>
+          </svg>
+        </div>
+        <div class="tabbar"><span class="on"><i></i>Home</span><span><i></i>Croc</span><span><i></i>Games</span><span><i></i>Profile</span></div>
+      </div>
+      <figcaption><b>Home: the river map</b>Today's session on top, the journey below. Each zone ends with a longer trance.</figcaption>
+    </figure>
+
+    <figure class="phone-card">
+      <div class="phone s-water">
+        <div class="notch"></div>
+        <div class="status"><span>9:41</span><span>●●●</span></div>
+        <div class="body">
+                    <h4><span class="ph">Mood question</span></h4>
+          <div class="wopt"><svg viewBox="0 0 46 18" aria-hidden="true"><path d="M0 9 Q5.75 1 11.5 9 T23 9 T34.5 9 T46 9" stroke="#24452A" stroke-width="2.4" fill="none"/></svg><span class="ph">Mood 1</span></div>
+          <div class="wopt sel"><svg viewBox="0 0 46 18" aria-hidden="true"><path d="M0 9 Q5.75 3.5 11.5 9 T23 9 T34.5 9 T46 9" stroke="#1D6E6A" stroke-width="2.4" fill="none"/></svg><span class="ph">Mood 2</span></div>
+          <div class="wopt"><svg viewBox="0 0 46 18" aria-hidden="true"><path d="M0 9 Q5.75 6 11.5 9 T23 9 T34.5 9 T46 9" stroke="#24452A" stroke-width="2.4" fill="none"/></svg><span class="ph">Mood 3</span></div>
+          <div class="wopt"><svg viewBox="0 0 46 18" aria-hidden="true"><path d="M0 9 Q5.75 7.6 11.5 9 T23 9 T34.5 9 T46 9" stroke="#24452A" stroke-width="2.4" fill="none"/></svg><span class="ph">Mood 4</span></div>
+          <div class="wopt"><svg viewBox="0 0 46 18" aria-hidden="true"><path d="M0 9 H46" stroke="#24452A" stroke-width="2.4" fill="none"/></svg><span class="ph">Mood 5</span></div>
+          <div style="flex:1"></div>
+          <span class="btn3d btn-green">Continue</span>
+        </div>
+      </div>
+      <figcaption><b>Mood check</b>Five moods shown as water, from rough to still. Asked before and after each session, so users can see their change.</figcaption>
+    </figure>
+
+    <figure class="phone-card">
+      <div class="phone s-dive">
+        <div class="notch"></div>
+        <div class="status" style="color:#4E7568"><span>9:41</span><span>●●●</span></div>
+        <div class="body">
+          <span class="where"><span class="ph">Zone</span></span>
+          <h4><span class="ph">Session title</span></h4>
+          <div class="eye-wrap">
+            <span class="ring"></span><span class="ring"></span><span class="ring"></span>
+            <svg class="eye" viewBox="0 0 100 100" aria-hidden="true"><use href="#eye"/></svg>
+          </div>
+          <p class="line"><span class="ph">Caption from the recording</span></p>
+          <div class="spacer"></div>
+          <div class="prog"><i></i></div>
+          <div class="times"><span>03:12</span><span>08:00</span></div>
+          <div class="ctrls"><span class="sm">−15s</span><span class="pause"><span><i></i><i></i></span></span><span class="sm">Sound</span></div>
+        </div>
+      </div>
+      <figcaption><b>Trance player</b>No points and no pop-ups. The croc's eye is the focus point, and the ripples pulse at breathing pace.</figcaption>
+    </figure>
+
+    <figure class="phone-card">
+      <div class="phone s-fire">
+        <div class="notch"></div>
+        <div class="status" style="color:#5F8577"><span>9:41</span><span>●●●</span></div>
+        <div class="body">
+          <div class="hdr"><span>✕</span><span>Round 2 of 3</span></div>
+          <h4><span class="ph">Game name</span></h4>
+          <p class="inst"><span class="ph">Game instruction</span></p>
+          <div class="field">
+            <svg viewBox="0 0 220 260" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+              <ellipse cx="0" cy="40" rx="40" ry="60" fill="#0E2A21"/>
+              <ellipse cx="220" cy="90" rx="44" ry="70" fill="#0E2A21"/>
+              <ellipse cx="30" cy="250" rx="70" ry="40" fill="#0C241C"/>
+              <ellipse cx="200" cy="250" rx="60" ry="36" fill="#0C241C"/>
+              <path d="M70 190 C 90 150, 150 170, 140 120 S 90 70, 120 50" stroke="#F2A93B" stroke-opacity=".25" stroke-width="2" stroke-dasharray="1 7" stroke-linecap="round" fill="none"/>
+              <g class="fly">
+                <circle cx="110" cy="140" r="22" fill="#F2A93B" opacity=".12"/>
+                <circle cx="110" cy="140" r="11" fill="#F2A93B" opacity=".3"/>
+                <circle cx="110" cy="140" r="4.5" fill="#FFE3A3"/>
+              </g>
+              <circle cx="40" cy="120" r="1.6" fill="#F2A93B" opacity=".5"/>
+              <circle cx="180" cy="200" r="1.4" fill="#F2A93B" opacity=".4"/>
+              <circle cx="170" cy="40" r="1.2" fill="#F2A93B" opacity=".4"/>
+            </svg>
+          </div>
+          <div class="meter">
+            <div class="row"><span>Stillness</span><span>86%</span></div>
+            <div class="bar"><i></i></div>
+          </div>
+        </div>
+      </div>
+      <figcaption><b>Mini-game: eye fixation</b>The user follows a slow firefly with their eyes. Trains eye fixation, a classic induction. The phone's motion sensor measures how still you stay.</figcaption>
+    </figure>
+
+    <figure class="phone-card">
+      <div class="phone s-lagoon">
+        <div class="notch"></div>
+        <div class="status"><span>9:41</span><span>●●●</span></div>
+        <div class="hdr"><h4><span class="ph">Habitat title</span></h4><span class="chip" style="background:#FFFFFF;color:#10201B"><i style="background:#F2A93B"></i>240</span></div>
+        <div class="scene">
+          <svg viewBox="0 0 240 250" preserveAspectRatio="xMidYMid slice" aria-label="Lagoon with a young crocodile, lily pads and a mangrove">
+            <ellipse cx="120" cy="190" rx="150" ry="90" fill="#1D6E6A"/><path d="M-20 104 Q 120 92 260 104" stroke="#7CC4B5" stroke-width="3" fill="none" opacity=".6"/>
+            <path d="M14 150 C 10 110, 16 90, 22 80" stroke="#5A3F22" stroke-width="5" fill="none" stroke-linecap="round"/>
+            <path d="M22 140 C 30 120, 34 110, 30 92" stroke="#5A3F22" stroke-width="3" fill="none" stroke-linecap="round"/>
+            <circle cx="14" cy="70" r="26" fill="#24452A"/><circle cx="40" cy="80" r="20" fill="#2E5A33"/><circle cx="-4" cy="92" r="20" fill="#2E5A33"/>
+            <circle cx="216" cy="74" r="22" fill="#2E5A33"/><circle cx="240" cy="60" r="26" fill="#24452A"/>
+            <path d="M206 150 C 212 120, 214 106, 220 96" stroke="#5A3F22" stroke-width="4" fill="none" stroke-linecap="round"/>
+            <path d="M60 228 a16 9 0 1 1 1 0 Z" fill="#5E9A4A"/><path d="M60 228 l12 -6" stroke="#1D6E6A" stroke-width="3"/>
+            <ellipse cx="186" cy="214" rx="18" ry="9" fill="#5E9A4A"/>
+            <ellipse cx="160" cy="236" rx="12" ry="6" fill="#4F8A3E"/>
+            <circle cx="186" cy="209" r="5" fill="#EE8FA6"/><circle cx="186" cy="209" r="2" fill="#FFE3A3"/>
+            <circle cx="48" cy="216" r="4" fill="#EE8FA6"/>
+            <svg x="50" y="128" width="140" height="75" viewBox="0 0 120 64"><use href="#croc"/></svg>
+            <circle cx="96" cy="100" r="2.2" fill="#F2A93B"/><circle cx="140" cy="86" r="1.8" fill="#F2A93B"/><circle cx="176" cy="116" r="2" fill="#F2A93B"/>
+          </svg>
+        </div>
+        <div class="card">
+          <div class="row"><b><span class="ph">Croc name</span> · <span class="ph">Stage</span></b><small>Level 7</small></div>
+          <div class="xp"><i></i></div>
+          <small><span class="ph">Progress message</span></small>
+          <span class="new"><span class="ph">Unlock message</span></span>
+        </div>
+      </div>
+      <figcaption><b>The croc's habitat</b>The user's croc and its home. Growth is based on total calm minutes, so it only ever goes up.</figcaption>
+    </figure>
+
+  </div>
+</section>
+
+<section id="loop">
+  <div class="sec-head"><p class="eyebrow">Core loop</p><h2>One daily visit, five small steps</h2><p class="muted prose">A full loop takes 5 to 12 minutes. Steps 1, 3 and 4 are optional. A tired user can tap play and skip straight to step 2.</p></div>
+  <ol class="loop">
+    <li><span class="n">1</span><b>Mood check</b><p>One-tap mood check.</p></li>
+    <li><span class="n">2</span><b>Session</b><p>Audio trance, video lesson or visual exercise, matched to goal and mood.</p></li>
+    <li><span class="n">3</span><b>Play</b><p>A 1–3 minute mini-game that practises one skill.</p></li>
+    <li><span class="n">4</span><b>Reward</b><p>Second mood check, points earned, croc grows, items unlock.</p></li>
+    <li><span class="n">5</span><b>Return</b><p>A gentle reminder at the user's chosen time.</p></li>
+  </ol>
+  <p class="loop-note">The reward moment (step 4) is the loudest moment in the app: a water-drop sound, a little splash and the croc's growth bar filling up. It always happens after the trance, never during it.</p>
+</section>
+
+<section id="river">
+  <div class="sec-head"><p class="eyebrow">Content structure</p><h2>Six zones, one journey</h2><p class="muted prose">Each zone is a themed program of 8 to 12 stops that mix all content formats, and ends with a longer 20-minute trance. Users can start in the zone that matches their goal; the intro zone is recommended first. Zone names will come from MHP.</p></div>
+  <div class="tbl">
+    <table>
+      <thead><tr><th>Zone</th><th>Outcome for the user</th><th>Example stops</th></tr></thead>
+      <tbody>
+        <tr><td><span class="z" style="background:#F2A93B"></span>Intro</td><td>Understand self-hypnosis and feel it work once</td><td class="m">Welcome video, intro lesson, first 3-min trance, stillness game</td></tr>
+        <tr><td><span class="z" style="background:#1D6E6A"></span>Sleep</td><td>Fall asleep faster and sleep through</td><td class="m">Bedtime trances, countdown game, night soundscape, bedtime routine video</td></tr>
+        <tr><td><span class="z" style="background:#8A6A43"></span>Stress</td><td>Calm down within minutes, anywhere</td><td class="m">3-min quick trances, breathing game, letting-go game</td></tr>
+        <tr><td><span class="z" style="background:#3F6B35"></span>Confidence</td><td>Feel strong before big moments</td><td class="m">Anchoring game, future-self visualisation, trances for exams and presentations</td></tr>
+        <tr><td><span class="z" style="background:#7CC4B5"></span>Focus</td><td>Concentrate for longer</td><td class="m">Eye-fixation game, fixation visuals, focus trance</td></tr>
+        <tr><td><span class="z" style="background:#EE8FA6"></span>Habits</td><td>Change a habit (snacking, smoking, scrolling)</td><td class="m">Suggestion builder, record your own suggestions, 21-day habit path</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="formats">
+  <div class="sec-head"><p class="eyebrow">Formats</p><h2>Four ways to meet our content</h2></div>
+  <div class="grid">
+    <div class="tile"><span class="tag">Video</span><h3>Video lessons</h3><p>2–5 minute portrait videos from MHP coaches. Subtitles always on by default. They explain the "why" before each new skill.</p></div>
+    <div class="tile"><span class="tag">Audio</span><h3>Audio trances</h3><p>3, 8, 15 and 25 minute versions. Choice of background (river, rain, night jungle). Plays with the screen off and can be downloaded for offline use.</p></div>
+    <div class="tile"><span class="tag">Visuals</span><h3>Visuals</h3><p>Fixation images, imagery cards and breathing animations. Slow and flicker-free, so they are safe for photosensitive users.</p></div>
+    <div class="tile"><span class="tag">Games</span><h3>Mini-games</h3><p>Short games that each train one real self-hypnosis skill. Every game ends by asking the user to repeat the skill with eyes closed.</p></div>
+  </div>
+</section>
+
+<section id="games">
+  <div class="sec-head"><p class="eyebrow">Mini-games</p><h2>Games that teach the method</h2><p class="muted prose">Six games, each 1 to 3 minutes long. They use touch, breath pacing and the motion sensor. None use timers that rush the user, and none can be lost. Game names will come from MHP.</p></div>
+  <div class="games">
+    <div class="game">
+      <svg viewBox="0 0 56 56" aria-hidden="true"><rect width="56" height="56" fill="#1D6E6A"/><svg x="4" y="14" width="48" height="26" viewBox="0 0 120 64"><use href="#croc"/></svg></svg>
+      <div><b>Stillness game</b><p>Lie the phone on your chest and stay still. The croc sinks lower in the water the calmer you are.</p><span class="skill">Body relaxation</span></div>
+    </div>
+    <div class="game">
+      <svg viewBox="0 0 56 56" aria-hidden="true"><rect width="56" height="56" fill="#0E2E24"/><circle cx="28" cy="28" r="12" fill="#F2A93B" opacity=".25"/><circle cx="28" cy="28" r="4" fill="#FFE3A3"/></svg>
+      <div><b>Eye-fixation game</b><p>Follow a slow firefly with your eyes only until your eyelids feel heavy.</p><span class="skill">Eye-fixation induction</span></div>
+    </div>
+    <div class="game">
+      <svg viewBox="0 0 56 56" aria-hidden="true"><rect width="56" height="56" fill="#7CC4B5"/><circle cx="28" cy="28" r="6" fill="none" stroke="#0E2E24" stroke-width="2"/><circle cx="28" cy="28" r="13" fill="none" stroke="#0E2E24" stroke-width="1.6" opacity=".6"/><circle cx="28" cy="28" r="20" fill="none" stroke="#0E2E24" stroke-width="1.2" opacity=".35"/></svg>
+      <div><b>Breathing game</b><p>Hold to breathe in, let go to breathe out. Ripples spread across the water. The goal is six breaths a minute.</p><span class="skill">Paced breathing</span></div>
+    </div>
+    <div class="game">
+      <svg viewBox="0 0 56 56" aria-hidden="true"><rect width="56" height="56" fill="#17524F"/><rect x="12" y="26" width="32" height="8" rx="4" fill="#8A6A43"/><path d="M0 32 H56 V56 H0 Z" fill="#1D6E6A" opacity=".8"/><text x="28" y="18" text-anchor="middle" font-family="Baloo 2, sans-serif" font-weight="800" font-size="12" fill="#E7F0E6">7</text></svg>
+      <div><b>Countdown game</b><p>Count down from 10 to 1 while a log sinks deeper with every number.</p><span class="skill">Deepener</span></div>
+    </div>
+    <div class="game">
+      <svg viewBox="0 0 56 56" aria-hidden="true"><rect width="56" height="56" fill="#3F6B35"/><path d="M14 36 q8 -14 20 -18 q-2 14 -20 18 Z" fill="#B6D98B"/><path d="M0 42 Q14 38 28 42 T56 42" stroke="#7CC4B5" stroke-width="2" fill="none"/></svg>
+      <div><b>Letting-go game</b><p>Write a worry on a leaf and drag it into the river. Watch it drift out of sight.</p><span class="skill">Letting go</span></div>
+    </div>
+    <div class="game">
+      <svg viewBox="0 0 56 56" aria-hidden="true"><rect width="56" height="56" fill="#F2A93B"/><circle cx="22" cy="30" r="8" fill="#3A2205"/><circle cx="34" cy="30" r="8" fill="#3A2205" opacity=".7"/></svg>
+      <div><b>Anchoring game</b><p>Relive a strong, good memory. At its peak, press thumb and finger together. Practise until the feeling returns on touch.</p><span class="skill">Anchoring</span></div>
+    </div>
+  </div>
+</section>
+
+<section id="game-system">
+  <div class="sec-head"><p class="eyebrow">Gamification</p><h2>Motivating without stressing</h2><p class="muted prose">Most gamified apps use fear of losing something. That works against relaxation. Every mechanic here rewards showing up and never punishes absence.</p></div>
+  <div class="tbl">
+    <table>
+      <thead><tr><th>Mechanic</th><th>How it works</th><th>Calm-safe rule</th></tr></thead>
+      <tbody>
+        <tr><td>Points</td><td>Earned for every session, lesson and game. Spent on habitat decorations.</td><td class="m">Points can't be bought. Progress is never for sale.</td></tr>
+        <tr><td>Croc growth</td><td>Five growth stages, from egg to fully grown. Based on total calm minutes.</td><td class="m">The croc never shrinks, gets sick or looks sad.</td></tr>
+        <tr><td>Weekly goal</td><td>A weekly goal the user sets (3 to 7 days).</td><td class="m">Weekly, not daily. Missing a day costs nothing.</td></tr>
+        <tr><td>Habitat</td><td>Decorate the croc's home: lilies, mangroves, fireflies, herons, a waterfall.</td><td class="m">Cosmetic only. A quiet, personal space.</td></tr>
+        <tr><td>Badges</td><td>Collectible badges for milestones, such as a first evening session or 10 hours in total.</td><td class="m">Celebrate personal milestones. No leaderboards or comparison.</td></tr>
+        <tr><td>Mood change</td><td>Before and after mood check, shown as a personal chart over time.</td><td class="m">Private by default. Never shared with a coach without consent.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="look">
+  <div class="sec-head"><p class="eyebrow">Look &amp; feel</p><h2>Jungle, river and croc</h2><p class="muted prose">Clearly different from the MHP Coaching app: rounder, warmer and more playful. Everything comes from the riverbank, with the crocodile's amber eye as the one bright accent.</p></div>
+  <div class="swatches">
+    <div class="sw"><div class="c" style="background:#0E2E24"></div><div class="l"><b>Deep Jungle</b><code>#0E2E24</code><span>Headers, welcome screen</span></div></div>
+    <div class="sw"><div class="c" style="background:#3F6B35"></div><div class="l"><b>Croc Green</b><code>#3F6B35</code><span>Mascot, primary buttons</span></div></div>
+    <div class="sw"><div class="c" style="background:#1D6E6A"></div><div class="l"><b>River Teal</b><code>#1D6E6A</code><span>Water, links, progress</span></div></div>
+    <div class="sw"><div class="c" style="background:#7CC4B5"></div><div class="l"><b>Shallows</b><code>#7CC4B5</code><span>Ripples, highlights</span></div></div>
+    <div class="sw"><div class="c" style="background:#F2A93B"></div><div class="l"><b>Croc Eye Amber</b><code>#F2A93B</code><span>Play buttons, rewards (the only "hot" colour)</span></div></div>
+    <div class="sw"><div class="c" style="background:#EE8FA6"></div><div class="l"><b>Water Lily</b><code>#EE8FA6</code><span>Rare: new unlocks, celebrations</span></div></div>
+    <div class="sw"><div class="c" style="background:#8A6A43"></div><div class="l"><b>Riverbank Mud</b><code>#8A6A43</code><span>Wood, logs, earthy details</span></div></div>
+    <div class="sw"><div class="c" style="background:#E7F0E6"></div><div class="l"><b>River Mist</b><code>#E7F0E6</code><span>Light backgrounds</span></div></div>
+    <div class="sw"><div class="c" style="background:#08171A"></div><div class="l"><b>Night River</b><code>#08171A</code><span>Trance mode background</span></div></div>
+  </div>
+
+  <div class="modes">
+    <div class="mode mode-day">
+      <p class="eyebrow">Atmosphere 1 · Play</p>
+      <h3>Daylight Riverbank</h3>
+      <ul>
+        <li>Used for the map, lagoon, games and rewards</li>
+        <li>Bright greens, chunky buttons with a pressable 3D edge</li>
+        <li>Bouncy spring animations, splashes, small sounds</li>
+        <li>The croc is visible and reacts to taps</li>
+      </ul>
+    </div>
+    <div class="mode mode-night">
+      <p class="eyebrow">Atmosphere 2 · Calm</p>
+      <h3>Night River</h3>
+      <ul>
+        <li>Used for every trance, video and visual</li>
+        <li>Near-black teal, one amber glow, large quiet type</li>
+        <li>Slow animations (4–6 seconds) that match breathing</li>
+        <li>No counters, badges, haptics or notifications</li>
+      </ul>
+    </div>
+  </div>
+  <p class="muted prose" style="margin-top:14px">The switch between the two is a designed moment. When a session starts, the croc slowly sinks below the surface and the screen fades to Night River. That two-second animation is the first step of the induction.</p>
+
+  <div class="type-spec">
+    <div class="tile"><span class="tag">Display</span><span class="big">Baloo 2</span><p>Round, friendly and bold. Used for titles, buttons and numbers.</p></div>
+    <div class="tile"><span class="tag">Body</span><span class="big body">Nunito Sans</span><p>Soft and very readable at small sizes. Used for instructions and trance captions.</p></div>
+  </div>
+
+  <div class="grid" style="margin-top:16px">
+    <div class="tile"><span class="tag">Shapes</span><p>Pebble-round corners, organic blob shapes for zones, a subtle croc-scale pattern on cards and progress bars.</p>
+      <div class="btn-demo"><span style="background:#F2A93B;color:#3A2205;box-shadow:0 4px 0 #B87515">Primary</span><span style="background:#3F6B35;color:#F2F7EF;box-shadow:0 4px 0 #24452A">Secondary</span></div>
+    </div>
+    <div class="tile"><span class="tag">Sound &amp; haptics</span><p>A soft wooden "tok" on taps, a water drop for points, a frog chorus for level-ups. All of it turns off in Night River.</p></div>
+    <div class="tile"><span class="tag">Mascot</span><p>The croc is drawn by a commissioned illustrator, with 5 growth stages and about 12 expressions. It always looks calm or happy, never anxious.</p></div>
+    <div class="tile"><span class="tag">Accessibility</span><p>WCAG AA contrast, dynamic type, reduced-motion mode, captions on every video, transcripts for every trance, no flashing visuals.</p></div>
+  </div>
+</section>
+
+<section id="account">
+  <div class="sec-head"><p class="eyebrow">Accounts</p><h2>One MHP account, two apps</h2><p class="muted prose">Both apps sign in against the same identity service. A user who signs up in MHP Hypnose can open MHP Coaching and sign in with the same email and password, and the other way round.</p></div>
+  <div class="acct">
+    <div class="node"><b>MHP Coaching</b><small>existing app</small></div>
+    <div class="arrow" aria-hidden="true">⇄</div>
+    <div class="node core"><b>MHP Account</b><small>one identity service: login, profile, subscription</small></div>
+    <div class="arrow" aria-hidden="true">⇄</div>
+    <div class="node"><b>MHP Hypnose</b><small>new app, a second client of the same service</small></div>
+  </div>
+  <ul class="req">
+    <li><b>Reuse the existing auth backend.</b> Whatever MHP Coaching uses today (for example Firebase Auth, Supabase, Auth0, Cognito or a custom backend), MHP Hypnose becomes a second app on the same user pool. If it's custom, we add a standard OAuth 2.0 / OpenID Connect layer so both apps sign in the same way.</li>
+    <li><b>One-tap sign-in.</b> If the Coaching app is signed in on the same phone, Hypnose offers a one-tap sign-in using a shared keychain (iOS) or account sharing (Android).</li>
+    <li><b>Shared profile, separate app data.</b> Name, email, language and subscription are shared. Croc, points and mood history belong to Hypnose only.</li>
+    <li><b>Same social logins in both apps.</b> If we offer Google or Facebook sign-in on iOS, Apple's rules require Sign in with Apple as well.</li>
+    <li><b>Account deletion in the app.</b> Required by Apple and Google. We must decide whether "Delete account" removes the whole MHP account or only Hypnose data.</li>
+    <li><b>Health data under GDPR.</b> Mood check-ins count as health data. We need explicit consent, EU hosting and a clear privacy screen.</li>
+    <li><b>Later: coach-prescribed sessions.</b> A coach in MHP Coaching sends a specific trance, and it shows up as a glowing stop on the user's river.</li>
+  </ul>
+</section>
+
+<section id="onboarding">
+  <div class="sec-head"><p class="eyebrow">Onboarding</p><h2>From install to first calm in under two minutes</h2></div>
+  <ol class="steps">
+    <li><span class="n">1</span><div><b>Sign in or create account</b><p>One screen, with one-tap sign-in if the Coaching app is on the phone.</p></div></li>
+    <li><span class="n">2</span><div><b>Goals</b><p>Pick one or two goals: sleep, stress, confidence, focus, habits. This sets the first zone.</p></div></li>
+    <li><span class="n">3</span><div><b>Experience and timing</b><p>New to hypnosis or experienced? Morning or evening person? This sets session length and reminder time.</p></div></li>
+    <li><span class="n">4</span><div><b>Quick safety check</b><p>Three yes/no questions (for example epilepsy or a history of psychosis). The answers adapt the content shown and are never shared.</p></div></li>
+    <li><span class="n">5</span><div><b>Hatch the croc</b><p>Tap the egg three times, it hatches, and the user names it. This is the emotional hook.</p></div></li>
+    <li><span class="n">6</span><div><b>First session</b><p>A 3-minute stillness game plus a short trance, with a mood check before and after.</p></div></li>
+    <li><span class="n">7</span><div><b>Reminder opt-in</b><p>We ask for notifications only now, after the user has felt it work.</p></div></li>
+  </ol>
+</section>
+
+<section id="safety">
+  <div class="sec-head"><p class="eyebrow">Safety &amp; trust</p><h2>Responsible by design</h2></div>
+  <div class="grid">
+    <div class="tile"><h3>Clear limits</h3><p>The app supports wellbeing and is not therapy or medical treatment. We say this in onboarding and on the Me tab, in plain words.</p></div>
+    <div class="tile"><h3>No trances while driving</h3><p>Audio trances pause when CarPlay or Android Auto connects, with a short warning.</p></div>
+    <div class="tile"><h3>Safe visuals</h3><p>No fast spirals or flashing. Every visual is checked against the WCAG flash rules before release.</p></div>
+    <div class="tile"><h3>Always wake up</h3><p>Every trance ends with a clear re-alerting section. Sleep trances are labelled and are only suggested in the evening.</p></div>
+    <div class="tile"><h3>Help is close</h3><p>Crisis contacts for the user's country (in Germany, TelefonSeelsorge on 0800 111 0 111) are one tap away in the Me tab.</p></div>
+    <div class="tile"><h3>Private by default</h3><p>Mood data stays with the user. Sharing with a coach is opt-in and can be switched off at any time.</p></div>
+  </div>
+</section>
+
+<section id="roadmap">
+  <div class="sec-head"><p class="eyebrow">Roadmap</p><h2>Start small, grow the river</h2><p class="muted prose">The MVP proves the core loop with two zones. More zones and games follow once we see people coming back.</p></div>
+  <div class="road">
+    <div class="phase mvp">
+      <p class="eyebrow">Phase 1 · MVP</p>
+            <ul>
+        <li>Shared MHP login and sign-up</li>
+        <li>Onboarding with croc hatching</li>
+        <li>2 zones: intro and sleep (about 25 pieces of content)</li>
+        <li>Audio player: background play, offline, sleep timer</li>
+        <li>Video lessons and visuals</li>
+        <li>3 games: stillness, breathing, eye fixation</li>
+        <li>Mood check, points, croc growth, habitat with 12 items</li>
+        <li>Weekly goal and reminders</li>
+        <li>Content management for the MHP team</li>
+      </ul>
+    </div>
+    <div class="phase">
+      <p class="eyebrow">Phase 2</p>
+            <ul>
+        <li>Stress and confidence zones</li>
+        <li>Countdown, letting-go and anchoring games</li>
+        <li>Badges and personal mood chart</li>
+        <li>Apple Health and Health Connect mindful minutes</li>
+        <li>Home-screen widget with the user's croc</li>
+        <li>Coach-prescribed sessions from MHP Coaching</li>
+      </ul>
+    </div>
+    <div class="phase">
+      <p class="eyebrow">Phase 3</p>
+            <ul>
+        <li>Focus and habits zones</li>
+        <li>Record your own suggestions in your own voice</li>
+        <li>Seasonal events</li>
+        <li>Apple Watch breathing companion</li>
+        <li>More languages</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="metrics">
+  <div class="sec-head"><p class="eyebrow">Success metrics</p><h2>How we'll know it works</h2><p class="muted prose">Targets are starting assumptions for the first three months after launch, to be reset once we have real data.</p></div>
+  <div class="metrics">
+    <div class="metric"><div><b>Sessions per active user per week</b><span>North-star metric. Completed trances, lessons or games.</span></div><div class="target">3+<small>per week</small></div></div>
+    <div class="metric"><div><b>Activation</b><span>New users who finish their first session on the day they install.</span></div><div class="target">70%<small>of sign-ups</small></div></div>
+    <div class="metric"><div><b>Better mood after</b><span>Sessions where the after-check is calmer than the before-check.</span></div><div class="target">70%<small>of sessions</small></div></div>
+    <div class="metric"><div><b>Trance completion</b><span>Audio trances listened to the end.</span></div><div class="target">80%<small>of starts</small></div></div>
+    <div class="metric"><div><b>Day-30 retention</b><span>Users still active one month after install.</span></div><div class="target">25%<small>of installs</small></div></div>
+    <div class="metric"><div><b>Coaching bridge</b><span>Hypnose-only users who book or start MHP Coaching.</span></div><div class="target">5%<small>within 90 days</small></div></div>
+  </div>
+</section>
+
+<section id="questions">
+  <div class="sec-head"><p class="eyebrow">Decisions needed</p><h2>Open questions for the team</h2></div>
+  <ol class="qs">
+    <li><b>What does MHP Coaching use for login today?</b><p>This decides how we build the shared account, and how much work it is.</p></li>
+    <li><b>How is it priced?</b><p>Included in a coaching subscription, its own subscription, or free with paid zones? Should one purchase unlock both apps?</p></li>
+    <li><b>Which languages at launch?</b><p>German only, or German and English? This affects voice recordings and the app name.</p></li>
+    <li><b>How much content exists today?</b><p>A count of videos, audio and visuals we can reuse, and how fast the team can produce new pieces. The MVP needs about 25.</p></li>
+    <li><b>What is the Coaching app built with?</b><p>If it uses React Native or Flutter, we use the same so code and people can be shared.</p></li>
+    <li><b>What can coaches see?</b><p>Should a client's Hypnose activity show up for their coach, and only with consent?</p></li>
+    <li><b>Who is the croc?</b><p>Do we give the mascot a fixed name and personality, or let each user name their own? And which illustrator draws it?</p></li>
+    <li><b>All in-app copy</b><p>Tagline, names (app areas, zones, games, points, growth stages, badges), mood labels, onboarding questions, button and message text, and notification text. Marked as placeholders in the mockups until MHP provides them.</p></li>
+  </ol>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">MHP Hypnose · product concept v0.1 · prepared October 2026 · all screens are early mockups, and numbers and targets are proposals, and all in-app copy will come from MHP.</div>
+</footer>

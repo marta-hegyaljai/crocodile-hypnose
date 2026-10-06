@@ -1,0 +1,9 @@
+node_modules
+dist
+dist-e2e
+.expo
+test-results
+playwright-report
+docs/product-concept.html
+package-lock.json
+server/data

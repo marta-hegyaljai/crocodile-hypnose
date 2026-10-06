@@ -1,0 +1,56 @@
+{
+  "expo": {
+    "name": "MHP Hypnose",
+    "slug": "mhp-hypnose",
+    "version": "0.1.0",
+    "scheme": "mhphypnose",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "backgroundColor": "#E7F0E6",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0E2E24"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.mhp.hypnose"
+    },
+    "android": {
+      "package": "com.mhp.hypnose",
+      "adaptiveIcon": {
+        "backgroundColor": "#0E2E24",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single",
+      "favicon": "./assets/favicon.png",
+      "backgroundColor": "#E7F0E6"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#0E2E24"
+        }
+      ],
+      "expo-font",
+      "expo-asset",
+      "expo-secure-store",
+      "expo-audio"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
