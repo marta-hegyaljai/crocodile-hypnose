@@ -106,6 +106,7 @@ function GuardedStack() {
             <Stack.Protected guard={signedIn && onboardingDone}>
               <Stack.Screen name="(app)" />
               <Stack.Screen name="session/[stopId]" />
+              <Stack.Screen name="game/[gameId]" />
             </Stack.Protected>
             {/* ...the others walk through onboarding first (resumable at any step). */}
             <Stack.Protected guard={signedIn && !onboardingDone}>
