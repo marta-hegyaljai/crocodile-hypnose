@@ -57,7 +57,7 @@ We don't know yet which auth system MHP Coaching uses. So:
 | --- | --- | --- |
 | S01 Foundation and design system | DONE | 2026-10-05, review r2 + QA r2 + design r1 PASS (`docs/build/reviews/step-01-*`) |
 | S02 Accounts | DONE | 2026-10-06, review r3 + QA r2 + design r1 PASS (`docs/build/reviews/step-02-*`) |
-| S03 Onboarding | IN REVIEW (round 2 re-check, then design) | fix round 1 in `main` 93232aa |
+| S03 Onboarding | DONE | 2026-10-07, review r2 + QA r2 + design r1 PASS (`docs/build/reviews/step-03-*`) |
 | S04 Home and river map | IN PROGRESS | |
 | S05 Sessions | TODO | |
 | S06 Mini-games | TODO | |

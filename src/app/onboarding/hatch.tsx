@@ -74,13 +74,13 @@ export default function HatchScreen() {
     [],
   );
 
-  // Scene: the camera is close to the bank, the egg low in the frame. When the name sheet rises,
-  // the whole scene slides up so the hatchling stays in view above it (portrait).
-  const heroWidth = landscape
-    ? Math.min(Math.round(width * 0.42), 420)
-    : Math.min(Math.round(width * 0.92), 440);
+  // Scene: the camera is close to the bank and the nest sits just under the centre of the frame,
+  // the title in the sky right above it, so the hatchling is the hero the moment it is out. When
+  // the name sheet rises, the whole scene slides up so the hatchling stays in view above it
+  // (portrait).
+  const heroWidth = landscape ? Math.min(Math.round(width * 0.46), 460) : Math.min(width, 480);
   const heroHeight = Math.round(heroWidth * 0.74);
-  const groundY = Math.round(height * (landscape ? 0.74 : 0.76));
+  const groundY = Math.round(height * (landscape ? 0.78 : 0.64));
   const heroTop = groundY - Math.round(heroHeight * 0.84);
   const heroLeft = Math.round(width * (landscape ? 0.72 : 0.5) - heroWidth / 2);
   // The scene is drawn taller than the screen so the slide never shows its bottom edge.
@@ -89,6 +89,9 @@ export default function HatchScreen() {
   const bankTop = Math.min(0.85, Math.max(0.2, bankY / sceneHeight));
   const waterTop = Math.max(0.12, (bankY - Math.round(height * 0.2)) / sceneHeight);
   const leafSize = Math.min(Math.round(width * 0.22), Math.round(height * 0.16));
+  // The title floats in the sky between the top row and the horizon.
+  const skyTop = insets.top + BACK_ROW;
+  const skyHeight = Math.max(0, Math.round(waterTop * sceneHeight) - skyTop - space.sm);
   const shiftTarget =
     !landscape && settled && sheetHeight > 0
       ? Math.max(0, groundY + 8 - (height - sheetHeight))
@@ -246,12 +249,13 @@ export default function HatchScreen() {
           />
         </Animated.View>
 
-        {/* Title and tap hint on the sky. */}
+        {/* Title and tap hint, centred in the sky above the nest. */}
         <View
           style={[
             styles.sky,
             {
-              paddingTop: insets.top + BACK_ROW,
+              top: skyTop,
+              height: landscape ? undefined : skyHeight,
               paddingLeft: insets.left + space.xl,
               paddingRight: insets.right + space.xl,
             },
@@ -353,7 +357,14 @@ export default function HatchScreen() {
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   hero: { position: 'absolute' },
-  sky: { position: 'absolute', left: 0, right: 0, top: 0, gap: space.xs, alignItems: 'center' },
+  sky: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    gap: space.xs,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   skyLandscape: { alignItems: 'flex-start', width: '50%' },
   hatchedChip: { alignSelf: 'center' },
   topRow: {

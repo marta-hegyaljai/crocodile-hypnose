@@ -34,3 +34,5 @@
 | 3 | QA r1 m11 | Audio failures log uncaught page errors from inside expo-audio ("no supported sources", `NotAllowedError`); the fallback works, the toggle shows "Play" for 2 to 3 s before the silent timer starts. |
 | 3 | QA r1 m13 | The focus ring on the night play toggle is faint (amber on amber). |
 | 3 | QA r1 m14 | Desktop 1280x800 (not a required size): the jungle leaf covers the start of the hatch title. |
+| 3 | QA r2 | Egg focus ring low contrast over dark water (designer may take it in S03 polish). |
+| 3 | QA r2 | Mood-after picked but not confirmed is lost on reload. |

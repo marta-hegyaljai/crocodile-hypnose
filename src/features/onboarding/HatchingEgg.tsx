@@ -205,8 +205,9 @@ export function HatchingEgg({
   const eggW = Math.round(eggH * (EGG_VB.w / EGG_VB.h));
   const eggLeft = Math.round(width / 2 - eggW / 2);
   const eggTop = groundY - eggH + Math.round(eggH * 0.06);
-  // The hatchling stands where the egg stood.
-  const crocW = Math.min(Math.round(width * 0.92), 520);
+  // The hatchling stands where the egg stood. Its canvas is mostly air, so it is drawn wider than
+  // the nest: the croc itself then reads at about half the nest's width, the hero of the frame.
+  const crocW = Math.min(Math.round(width * 1.4), 680);
   const crocH = Math.round((crocW * (FIGURE_H - FIGURE_TOP)) / FIGURE_W);
   const crocTop = groundY - Math.round((crocH * (GROUND_Y - FIGURE_TOP)) / (FIGURE_H - FIGURE_TOP));
   const crocLeft = Math.round(width / 2 - crocW / 2);
@@ -313,6 +314,14 @@ export function HatchingEgg({
   }));
   const crack1Style = useAnimatedStyle(() => ({ opacity: crack1.value }));
   const crack2Style = useAnimatedStyle(() => ({ opacity: crack2.value }));
+  // A warm light swells behind the hatchling as the shell bursts and stays as a soft halo.
+  const glowStyle = useAnimatedStyle(() => {
+    const p = burst.value;
+    return {
+      opacity: Math.min(1, p * 3) * (1 - p * 0.5),
+      transform: [{ scale: 0.5 + Math.min(1, p * 1.6) * 0.5 }],
+    };
+  });
   const crocStyle = useAnimatedStyle(() => ({
     opacity: Math.min(1, pop.value * 2),
     transform: [
@@ -323,6 +332,7 @@ export function HatchingEgg({
   }));
 
   const remaining = Math.max(0, HATCH_TAPS - taps);
+  const glowR = Math.round(crocW * 0.42);
   const eggCentreX = eggLeft + eggW / 2;
   const eggCentreY = eggTop + eggH * 0.5;
 
@@ -370,6 +380,34 @@ export function HatchingEgg({
         ))}
       </Svg>
 
+      {/* The light of the moment, behind the hatchling. */}
+      {hatched && (
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            styles.glow,
+            {
+              left: width / 2 - glowR,
+              top: groundY - glowR * 1.1,
+              width: glowR * 2,
+              height: glowR * 2,
+            },
+            glowStyle,
+          ]}
+        >
+          <Svg width={glowR * 2} height={glowR * 2} viewBox="0 0 100 100">
+            <Defs>
+              <RadialGradient id="hatch-glow" cx="50" cy="50" r="50" gradientUnits="userSpaceOnUse">
+                <Stop offset="0" stopColor={colors.sparkle} stopOpacity={0.55} />
+                <Stop offset="0.45" stopColor={colors.sparkle} stopOpacity={0.22} />
+                <Stop offset="1" stopColor={colors.sparkle} stopOpacity={0} />
+              </RadialGradient>
+            </Defs>
+            <Ellipse cx={50} cy={50} rx={50} ry={50} fill="url(#hatch-glow)" />
+          </Svg>
+        </Animated.View>
+      )}
+
       {/* The hatchling, hidden inside the egg until it hatches. */}
       {hatched && (
         <Animated.View
@@ -413,7 +451,23 @@ export function HatchingEgg({
         ]}
         hitSlop={12}
       >
-        {focus.focused && !hatched && <FocusRing radius={eggW / 2 + 16} offset={0} />}
+        {focus.focused && !hatched && (
+          <>
+            <View
+              pointerEvents="none"
+              style={[
+                StyleSheet.absoluteFill,
+                {
+                  margin: -2,
+                  borderRadius: eggW / 2 + 18,
+                  borderWidth: 7,
+                  borderColor: colors.highlight,
+                },
+              ]}
+            />
+            <FocusRing radius={eggW / 2 + 16} offset={0} />
+          </>
+        )}
         <Animated.View style={[styles.eggInner, { width: eggW, height: eggH }, eggStyle]}>
           <Svg width={eggW} height={eggH} viewBox={`0 0 ${EGG_VB.w} ${EGG_VB.h}`}>
             <Defs>
@@ -522,7 +576,7 @@ export function HatchingEgg({
         active={hatched && animateHatch}
         x={eggCentreX}
         y={eggCentreY - eggH * 0.1}
-        radius={Math.round(Math.min(Math.max(width * 0.42, 120), 220))}
+        radius={Math.round(Math.min(Math.max(width * 0.6, 150), 320))}
         testID={testID ? `${testID}-celebration` : undefined}
       />
     </View>
@@ -532,6 +586,7 @@ export function HatchingEgg({
 const styles = StyleSheet.create({
   root: { position: 'relative', overflow: 'visible' },
   croc: { position: 'absolute' },
+  glow: { position: 'absolute' },
   egg: { position: 'absolute', alignItems: 'center', justifyContent: 'center' },
   eggInner: { position: 'relative' },
   fragment: { position: 'absolute' },

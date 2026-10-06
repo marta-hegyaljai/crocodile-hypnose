@@ -380,7 +380,10 @@ describe('first session', () => {
       () => expect(screen.getByTestId('onboarding-first-session-after')).toBeOnTheScreen(),
       { timeout: 3000 },
     );
-    // Back leads to the intro, which now offers Continue and Play again.
+    // Once the croc has surfaced, Back leads to the intro, which offers Continue and Play again.
+    await waitFor(() => expect(screen.queryByTestId('first-session-night')).toBeNull(), {
+      timeout: 4000,
+    });
     await press('onboarding-back');
     expect(screen.getByTestId('onboarding-first-session')).toBeOnTheScreen();
     expect(screen.getByTestId('onboarding-continue')).toBeOnTheScreen();
