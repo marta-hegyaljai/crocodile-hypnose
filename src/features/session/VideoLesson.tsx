@@ -248,10 +248,8 @@ export function VideoLesson({
                 variant="accent"
                 size={64}
                 accessibilityLabel={wanted ? t('common.pause') : t('common.play')}
-                onPress={() => {
-                  dim.poke();
-                  setWanted((w) => !w);
-                }}
+                onPress={dim.wake(() => setWanted((w) => !w))}
+                onFocus={dim.poke}
                 disabled={disabled || confirming}
                 testID="session-toggle"
               />
@@ -260,10 +258,8 @@ export function VideoLesson({
                 variant={showCaptions ? 'filled' : 'ghost'}
                 accessibilityLabel={showCaptions ? t('player.captionsOn') : t('player.captionsOff')}
                 accessibilityState={{ selected: showCaptions }}
-                onPress={() => {
-                  dim.poke();
-                  setShowCaptions((c) => !c);
-                }}
+                onPress={dim.wake(() => setShowCaptions((c) => !c))}
+                onFocus={dim.poke}
                 disabled={disabled || confirming}
                 testID="session-captions"
               />
@@ -282,10 +278,8 @@ export function VideoLesson({
           </NightDock>
           <View style={[styles.exit, { top: insets.top + space.sm, left: insets.left + space.md }]}>
             <SessionExit
-              onPress={() => {
-                dim.poke();
-                setConfirming(true);
-              }}
+              onPress={dim.wake(() => setConfirming(true))}
+              onFocus={dim.poke}
               disabled={disabled || confirming}
               testID="session-end"
             />

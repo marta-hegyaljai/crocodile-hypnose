@@ -193,10 +193,8 @@ export function VisualExercise({
                 variant="accent"
                 size={64}
                 accessibilityLabel={playing ? t('common.pause') : t('common.play')}
-                onPress={() => {
-                  dim.poke();
-                  setPlaying((p) => !p);
-                }}
+                onPress={dim.wake(() => setPlaying((p) => !p))}
+                onFocus={dim.poke}
                 disabled={disabled || confirming}
                 testID="session-toggle"
               />
@@ -215,10 +213,8 @@ export function VisualExercise({
           </NightDock>
           <View style={[styles.exit, { top: insets.top + space.sm, left: insets.left + space.md }]}>
             <SessionExit
-              onPress={() => {
-                dim.poke();
-                setConfirming(true);
-              }}
+              onPress={dim.wake(() => setConfirming(true))}
+              onFocus={dim.poke}
               disabled={disabled || confirming}
               testID="session-end"
             />

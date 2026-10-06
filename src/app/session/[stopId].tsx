@@ -22,7 +22,7 @@ import {
   type NightLayout,
 } from '@/features/session/NightRiver';
 import { canResume, createResumeStore, type ResumePoint } from '@/features/session/resume';
-import { MoodStep, RewardSheet } from '@/features/session/SessionDay';
+import { MoodStep, RewardSheet, useRewardHop } from '@/features/session/SessionDay';
 import { announceUnlocked } from '@/features/session/unlock';
 import { useListening } from '@/features/session/useListening';
 import { formatClock, useTrack, type Track } from '@/features/session/useTrackPlayer';
@@ -72,6 +72,8 @@ export default function SessionScreen() {
   const feedback = useFeedback();
   const layout = useNightLayout();
   const dive = useDive(layout.depth);
+  const [phase, setPhase] = useState<Phase>('intro');
+  const hop = useRewardHop(phase === 'reward');
 
   const view = stopId ? journey.byStopId.get(stopId) : undefined;
   const stop = view?.stop;
@@ -87,7 +89,6 @@ export default function SessionScreen() {
     { title },
   );
 
-  const [phase, setPhase] = useState<Phase>('intro');
   const [outcome, setOutcome] = useState<Outcome | null>(null);
   const [resume, setResume] = useState<ResumePoint | null>(null);
   /** When the saved place was read (0: not yet). */
@@ -247,6 +248,10 @@ export default function SessionScreen() {
   const busy = phase === 'sinking' || phase === 'surfacing';
   const nightMounted = phase === 'sinking' || phase === 'playing' || phase === 'surfacing';
   const finishedRise = phase === 'surfacing' && outcome === 'finished';
+  // While the day fades into the river, the croc is the one swimming in the night scene underneath.
+  const sinking = phase === 'sinking';
+  // A long trance begins at dusk: its intro and mood check already sit on the Night River.
+  const dusk = stop.type === 'longTrance' ? 'night' : undefined;
 
   let day: React.ReactNode;
   if (phase === 'reward' || (finishedRise && !consent)) {
@@ -256,6 +261,9 @@ export default function SessionScreen() {
         expression="excited"
         crocName={crocName}
         celebrating={phase === 'reward'}
+        celebrationScale={1.5}
+        crocOffsetY={hop.offset}
+        splash={hop.splash}
         header={null}
         sheet={<RewardSheet points={completion.points} onContinue={leave} />}
         testID="session-reward-screen"
@@ -285,13 +293,16 @@ export default function SessionScreen() {
         testID="session-mood-after"
       />
     );
-  } else if (phase === 'moodBefore') {
+  } else if (phase === 'moodBefore' || (sinking && consent)) {
+    // The mood sheet stays while the river takes over (no swap back to the intro mid-fade).
     day = (
       <LagoonSheetScreen
         stage="hatchling"
         expression="calm"
         crocName={crocName}
-        header={<Header onBack={() => setPhase('intro')} />}
+        showCroc={!sinking}
+        atmosphere={dusk}
+        header={<Header onBack={() => setPhase('intro')} disabled={sinking} />}
         sheet={
           <MoodStep
             title={t('session.moodTitle')}
@@ -317,6 +328,8 @@ export default function SessionScreen() {
         stage="hatchling"
         expression={busy ? 'eyesClosed' : stop.type === 'longTrance' ? 'sleepy' : 'happy'}
         crocName={crocName}
+        showCroc={!sinking}
+        atmosphere={dusk}
         header={<Header onBack={back} disabled={busy} />}
         sheet={
           <IntroSheet

@@ -139,11 +139,13 @@ export type Dive = ReturnType<typeof useDive>;
 
 /**
  * Controls fade almost away after a few seconds without a touch while the session plays (sleep
- * friendly), and come back on any touch. Dimmed controls stay usable, so a tap on one both shows
- * the controls and does what it says.
+ * friendly), and come back on any touch. The first touch on a dimmed control only brings the
+ * controls back (a sleepy tap to wake the screen must never pause the trance): wrap a control's
+ * action in `wake` for that. Keyboard focus on a control brings them back too (`onFocus: poke`).
  */
 export const AUTO_DIM_MS = 5000;
 export const DIMMED_OPACITY = 0.12;
+const REVEAL_GRACE_MS = 400;
 
 export function useAutoDim(active: boolean) {
   const reducedMotion = useReducedMotion();
@@ -151,6 +153,10 @@ export function useAutoDim(active: boolean) {
   const [touch, setTouch] = useState(0);
   const level = useSharedValue(1);
   const dimmed = active && idle;
+  const dimmedRef = useRef(dimmed);
+  useEffect(() => {
+    dimmedRef.current = dimmed;
+  }, [dimmed]);
   useEffect(() => {
     if (!active) return;
     const timer = setTimeout(() => setIdle(true), AUTO_DIM_MS);
@@ -160,12 +166,29 @@ export function useAutoDim(active: boolean) {
     const to = dimmed ? DIMMED_OPACITY : 1;
     level.value = reducedMotion ? to : withTiming(to, { duration: dimmed ? 1200 : 250 });
   }, [dimmed, reducedMotion, level]);
+  // When the controls last came back from dimmed: a press in the moment they are still fading in
+  // (focus on a mouse-down reveals before the click lands) is still the waking touch.
+  const revealedAt = useRef(0);
   const poke = useCallback(() => {
+    if (dimmedRef.current) revealedAt.current = Date.now();
     setIdle(false);
     setTouch((n) => n + 1);
   }, []);
+  /** In a control's press handler: reveals the controls; true when the press may also act. */
+  const guard = useCallback(() => {
+    const waking = dimmedRef.current || Date.now() - revealedAt.current < REVEAL_GRACE_MS;
+    poke();
+    return !waking;
+  }, [poke]);
+  /** A control's press: reveals the controls, and does the action only if they were visible. */
+  const wake = useCallback(
+    (action: () => void) => () => {
+      if (guard()) action();
+    },
+    [guard],
+  );
   const style = useAnimatedStyle(() => ({ opacity: level.value }));
-  return { dimmed, poke, style };
+  return { dimmed, poke, guard, wake, style };
 }
 
 export interface NightSceneProps {

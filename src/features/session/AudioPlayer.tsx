@@ -85,18 +85,21 @@ export function AudioPlayer({
   const duration = useCallback(() => durationRef.current, [durationRef]);
   useDevFastForward(!disabled, position, duration, listening, seekTo);
 
-  const toggle = () => {
-    dim.poke();
+  const toggle = dim.wake(() => {
     if (playing) {
       track.pause();
     } else {
       setCycle((c) => c + 1);
       track.play();
     }
-  };
+  });
   const back15 = () => {
+    if (dim.guard()) seekTo(Math.max(0, positionRef.current - 15));
+  };
+  // A touch on the water: the controls come back, and an open sound choice closes.
+  const touch = () => {
     dim.poke();
-    seekTo(Math.max(0, positionRef.current - 15));
+    setChoosing(false);
   };
 
   const { visual, centreX, ringY } = layout;
@@ -108,7 +111,7 @@ export function AudioPlayer({
       sink={dive.sink}
       depth={dive.depth}
       crocName={crocName}
-      onTouch={disabled ? undefined : dim.poke}
+      onTouch={disabled ? undefined : touch}
       // The scene is on screen during the dive and the rise; the player, once it can be used.
       testID={disabled ? id('night') : id('player')}
     >
@@ -138,6 +141,8 @@ export function AudioPlayer({
               testIDPrefix={testIDPrefix}
             />
             {choosing ? (
+              // The sound choice takes the controls' row, so the dock keeps its height and never
+              // grows over the breathing cue.
               <View style={styles.sounds} accessibilityRole="radiogroup" testID={id('sounds')}>
                 {SOUNDSCAPES.map((s) => (
                   <Button
@@ -156,41 +161,42 @@ export function AudioPlayer({
                   />
                 ))}
               </View>
-            ) : null}
-            <View style={styles.controlRow}>
-              <IconButton
-                icon="rewind"
-                variant="ghost"
-                accessibilityLabel={t('player.back15')}
-                onPress={back15}
-                disabled={disabled || confirming}
-                testID={id('back15')}
-              />
-              <IconButton
-                icon={playing ? 'pause' : 'play'}
-                variant="accent"
-                size={64}
-                accessibilityLabel={playing ? t('common.pause') : t('common.play')}
-                onPress={toggle}
-                disabled={disabled || confirming}
-                testID={id('toggle')}
-              />
-              {soundscapes ? (
+            ) : (
+              <View style={styles.controlRow}>
                 <IconButton
-                  icon="waves"
+                  icon="rewind"
                   variant="ghost"
-                  accessibilityLabel={t('player.sound')}
-                  onPress={() => {
-                    dim.poke();
-                    setChoosing((c) => !c);
-                  }}
+                  accessibilityLabel={t('player.back15')}
+                  onPress={back15}
+                  onFocus={dim.poke}
                   disabled={disabled || confirming}
-                  testID={id('sound')}
+                  testID={id('back15')}
                 />
-              ) : (
-                <View style={styles.spacer} />
-              )}
-            </View>
+                <IconButton
+                  icon={playing ? 'pause' : 'play'}
+                  variant="accent"
+                  size={64}
+                  accessibilityLabel={playing ? t('common.pause') : t('common.play')}
+                  onPress={toggle}
+                  onFocus={dim.poke}
+                  disabled={disabled || confirming}
+                  testID={id('toggle')}
+                />
+                {soundscapes ? (
+                  <IconButton
+                    icon="waves"
+                    variant="ghost"
+                    accessibilityLabel={t('player.sound')}
+                    onPress={dim.wake(() => setChoosing(true))}
+                    onFocus={dim.poke}
+                    disabled={disabled || confirming}
+                    testID={id('sound')}
+                  />
+                ) : (
+                  <View style={styles.spacer} />
+                )}
+              </View>
+            )}
             {onSkip ? (
               <Button
                 label={t('dev.skipSession')}
@@ -206,10 +212,8 @@ export function AudioPlayer({
           {/* A calm way out, top-left; it asks once before ending the session early. */}
           <View style={[styles.exit, { top: insets.top + space.sm, left: insets.left + space.md }]}>
             <SessionExit
-              onPress={() => {
-                dim.poke();
-                setConfirming(true);
-              }}
+              onPress={dim.wake(() => setConfirming(true))}
+              onFocus={dim.poke}
               disabled={disabled || confirming}
               testID={id('end')}
             />
@@ -233,10 +237,12 @@ export function AudioPlayer({
 /** The close button of every Night River player. */
 export function SessionExit({
   onPress,
+  onFocus,
   disabled,
   testID,
 }: {
   onPress: () => void;
+  onFocus?: () => void;
   disabled: boolean;
   testID: string;
 }) {
@@ -246,6 +252,7 @@ export function SessionExit({
       variant="filled"
       accessibilityLabel={t('player.end')}
       onPress={onPress}
+      onFocus={onFocus}
       disabled={disabled}
       testID={testID}
     />
@@ -311,7 +318,16 @@ const styles = StyleSheet.create({
     paddingTop: space.xs,
   },
   spacer: { width: 48, height: 48 },
-  sounds: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm, justifyContent: 'center' },
+  sounds: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: space.sm,
+    justifyContent: 'center',
+    alignItems: 'center',
+    // The same height as the controls' row (the 64 pt play button plus its top gap).
+    minHeight: 64 + space.xs,
+    paddingTop: space.xs,
+  },
   times: { flexDirection: 'row', justifyContent: 'space-between' },
   devSkip: { alignSelf: 'center' },
   exit: { position: 'absolute' },

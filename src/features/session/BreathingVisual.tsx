@@ -101,9 +101,11 @@ const CUE_TEXT = palette.mistDeep;
 
 const styles = StyleSheet.create({
   cue: {
-    paddingHorizontal: 16,
-    paddingVertical: 4,
+    paddingHorizontal: 18,
+    paddingVertical: 5,
     borderRadius: 999,
+    borderWidth: 1,
+    borderColor: withAlpha(palette.shallows, 0.35),
     backgroundColor: withAlpha(palette.nightRiver, 0.86),
   },
   root: { alignItems: 'center', justifyContent: 'center', gap: 8 },
