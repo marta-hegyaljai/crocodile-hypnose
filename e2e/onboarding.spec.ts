@@ -67,6 +67,12 @@ async function hatch(page: Page, screen: Locator) {
   await expect(screen.getByTestId('croc-name')).toBeVisible({ timeout: 5000 });
 }
 
+/** The account actions live on the Profile tab (placeholder until step 8). */
+async function openProfile(page: Page) {
+  await page.getByTestId('tab-profile').click();
+  await expect(page.getByTestId('profile-screen')).toBeVisible();
+}
+
 test.describe('onboarding', () => {
   test('from sign-up to home, resuming after a reload', async ({ page, request }, info) => {
     const errors = collectErrors(page);
@@ -210,7 +216,8 @@ test.describe('onboarding', () => {
     await expect(page.getByTestId('home-screen')).toBeVisible();
     await page.goto('/onboarding/goals');
     await expect(page.getByTestId('home-screen')).toBeVisible();
-    await page.getByTestId('home-sign-out').click();
+    await openProfile(page);
+    await page.getByTestId('profile-sign-out').click();
     await expect(page.getByTestId('welcome-screen')).toBeVisible();
     await page.getByTestId('welcome-sign-in').click();
     await page.getByTestId('sign-in-email').fill(email);

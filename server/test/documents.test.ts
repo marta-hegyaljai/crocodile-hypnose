@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { afterEach, beforeEach, describe, test } from 'node:test';
 
-import { CROC_NAME_MAX } from '../src/documents.ts';
+import { CROC_NAME_MAX, MAX_STOP_RECORDS } from '../src/documents.ts';
 import {
   COACHING,
   makeApp,
@@ -307,7 +307,7 @@ describe('GET/PUT /me/settings', () => {
   });
 
   test('an unknown document kind is not found', async () => {
-    const res = await get('progress');
+    const res = await get('croc-diary');
     assert.equal(res.statusCode, 404);
   });
 
@@ -318,5 +318,112 @@ describe('GET/PUT /me/settings', () => {
       headers: { origin: 'http://localhost:4173', 'access-control-request-method': 'PUT' },
     });
     assert.match(String(res.headers['access-control-allow-methods']), /PUT/);
+  });
+});
+
+describe('GET/PUT /me/progress', () => {
+  const at = () => ctx.clock.now;
+  const done = (t: number, completedAt = t) => ({ status: 'done', updatedAt: t, completedAt });
+  const started = (t: number) => ({ status: 'inProgress', updatedAt: t, completedAt: null });
+  const progress = (stops: Record<string, unknown>, updatedAt = at()) => ({
+    version: 1,
+    updatedAt,
+    stops,
+  });
+  const stopsOf = async () =>
+    (await get('progress')).json<{ progress: { stops: Record<string, unknown> } }>().progress.stops;
+
+  test('starts empty, stores and reads back', async () => {
+    assert.deepEqual((await get('progress')).json(), { progress: null });
+    const doc = progress({ 'intro-1': done(at()), 'intro-2': started(at()) });
+    const res = await put('progress', doc);
+    assert.equal(res.statusCode, 200);
+    assert.deepEqual(res.json<DocBody>().progress, { ...doc, storedAt: at() });
+  });
+
+  test('merges per stop: a stale copy never undoes a finished stop', async () => {
+    await put('progress', progress({ 'intro-1': done(at() - 1000), 'intro-2': done(at()) }));
+    // A stale device, newer document timestamp, knows intro-2 only as started.
+    const stale = progress({ 'intro-2': started(at() + 10), 'intro-3': started(at()) }, at() + 50);
+    const res = await put('progress', stale);
+    assert.deepEqual(res.json<DocBody>().progress?.stops, {
+      'intro-1': done(at() - 1000),
+      'intro-2': done(at()),
+      'intro-3': started(at()),
+    });
+  });
+
+  test('keeps the first completion time; newer unfinished records win', async () => {
+    await put('progress', progress({ 'sleep-1': done(at(), at() - 500), 'sleep-2': started(1) }));
+    await put('progress', progress({ 'sleep-1': done(at() + 5, at()), 'sleep-2': started(2) }));
+    assert.deepEqual(await stopsOf(), {
+      'sleep-1': done(at() + 5, at() - 500),
+      'sleep-2': started(2),
+    });
+  });
+
+  test('is idempotent: the same write twice stores the same thing', async () => {
+    const doc = progress({ 'intro-1': done(at()) });
+    const first = (await put('progress', doc)).json<DocBody>().progress;
+    const second = (await put('progress', doc)).json<DocBody>().progress;
+    assert.deepEqual(first?.stops, second?.stops);
+    assert.equal(first?.updatedAt, second?.updatedAt);
+  });
+
+  test('rejects bad stop ids, statuses and inconsistent records', async () => {
+    for (const stops of [
+      { 'Intro 1': done(at()) },
+      { 'intro-1': { status: 'skipped', updatedAt: 1, completedAt: null } },
+      { 'intro-1': { status: 'done', updatedAt: 1, completedAt: null } },
+      { 'intro-1': { status: 'inProgress', updatedAt: 1, completedAt: 1 } },
+      { 'intro-1': { ...done(at()), extra: true } },
+    ]) {
+      const res = await put('progress', progress(stops));
+      assert.equal(res.statusCode, 400, JSON.stringify(stops));
+    }
+    assert.deepEqual((await get('progress')).json(), { progress: null });
+  });
+
+  test('refuses a union over the record limit and keeps what is stored', async () => {
+    const batch = (from: number, n: number) =>
+      Object.fromEntries(
+        Array.from({ length: n }, (_, i) => [
+          `stop-${String(from + i).padStart(5, '0')}`,
+          started(1),
+        ]),
+      );
+    // Each request is within the limit; the stored union must be too.
+    for (let from = 0; from < MAX_STOP_RECORDS; from += 500) {
+      assert.equal((await put('progress', progress(batch(from, 500)))).statusCode, 200);
+    }
+    const before = await stopsOf();
+    assert.equal(Object.keys(before).length, MAX_STOP_RECORDS);
+    const over = await put('progress', progress(batch(MAX_STOP_RECORDS, 5)));
+    assert.equal(over.statusCode, 400);
+    assert.equal(over.json<ErrorJson>().error.code, 'invalid_request');
+    assert.deepEqual(over.json<ErrorJson>().error.fields, { stops: 'invalid_request' });
+    assert.deepEqual(await stopsOf(), before);
+    // Known ids still merge at the limit (a finished stop is not refused).
+    const finish = await put('progress', progress({ 'stop-00000': done(at()) }));
+    assert.equal(finish.statusCode, 200);
+    assert.equal(Object.keys(await stopsOf()).length, MAX_STOP_RECORDS);
+  });
+
+  test('accepts a full-size progress document within the body limit', async () => {
+    const stops = Object.fromEntries(
+      Array.from({ length: MAX_STOP_RECORDS }, (_, i) => [
+        `${String(i).padStart(5, '0')}-${'x'.repeat(58)}`,
+        done(Number.MAX_SAFE_INTEGER - 1),
+      ]),
+    );
+    const res = await put('progress', progress(stops));
+    assert.equal(res.statusCode, 200);
+  });
+
+  test('is per user', async () => {
+    await put('progress', progress({ 'intro-1': done(at()) }));
+    const other = (await signUp(ctx, { email: 'other@example.com' })).json<AuthBody>().tokens
+      .accessToken;
+    assert.deepEqual((await get('progress', other)).json(), { progress: null });
   });
 });

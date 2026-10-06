@@ -9,7 +9,7 @@
  */
 import { ApiError, type ErrorCode } from './errors.ts';
 
-export const DOCUMENT_KINDS = ['onboarding', 'settings'] as const;
+export const DOCUMENT_KINDS = ['onboarding', 'settings', 'progress'] as const;
 export type DocumentKind = (typeof DOCUMENT_KINDS)[number];
 
 export function isDocumentKind(value: unknown): value is DocumentKind {
@@ -171,13 +171,53 @@ const settingsV1 = {
   },
 } as const;
 
+/** Stop ids as the content pack names them. */
+export const STOP_ID_PATTERN = '^[a-z0-9-]{1,64}$';
+/** Far above any content pack; keeps one document bounded. */
+export const MAX_STOP_RECORDS = 2000;
+/** Body budget for `PUT /me/progress`: 2000 records at their longest (about 150 B each) fit. */
+export const PROGRESS_BODY_LIMIT = 320 * 1024;
+
+/**
+ * Progress along the river, v1: one record per stop the user has started or finished. Merged per
+ * stop (see `mergeProgress`), so it is not a whole-document last-write-wins like the others.
+ */
+const progressV1 = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['version', 'updatedAt', 'stops'],
+  properties: {
+    ...base,
+    stops: {
+      type: 'object',
+      maxProperties: MAX_STOP_RECORDS,
+      propertyNames: { pattern: STOP_ID_PATTERN },
+      additionalProperties: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['status', 'updatedAt', 'completedAt'],
+        properties: {
+          status: oneOf('inProgress', 'done'),
+          updatedAt: { type: 'integer', minimum: 0 },
+          completedAt: { type: ['integer', 'null'], minimum: 0 },
+        },
+      },
+    },
+  },
+} as const;
+
 /** JSON schema per kind and version. Add a version here to extend a document. */
 export const DOCUMENT_SCHEMAS: Record<DocumentKind, Record<number, object>> = {
   onboarding: { 1: onboardingV1 },
   settings: { 1: settingsV1 },
+  progress: { 1: progressV1 },
 };
 
-export const CURRENT_VERSION: Record<DocumentKind, number> = { onboarding: 1, settings: 1 };
+export const CURRENT_VERSION: Record<DocumentKind, number> = {
+  onboarding: 1,
+  settings: 1,
+  progress: 1,
+};
 
 /** Fastify body schema for PUT: any version this server knows for the kind. */
 export function bodySchemaFor(kind: DocumentKind): object {
@@ -211,6 +251,13 @@ export function checkDocumentRules(kind: DocumentKind, data: Doc, now: number): 
       fields.firstSession = 'invalid_request';
     }
   }
+  if (kind === 'progress') {
+    // A finished stop knows when it was finished; an unfinished one does not.
+    for (const entry of Object.values(record(data.stops))) {
+      const r = record(entry);
+      if ((r.status === 'done') !== (r.completedAt !== null)) fields.stops = 'invalid_request';
+    }
+  }
   if (Object.keys(fields).length > 0) {
     throw new ApiError(400, 'invalid_request', `The ${kind} document is not valid.`, fields);
   }
@@ -230,6 +277,16 @@ const stepIndex = (step: unknown) =>
  * Returns null to keep what is stored.
  */
 export function resolveDocument(kind: DocumentKind, stored: Doc | null, incoming: Doc): Doc | null {
+  if (kind === 'progress') {
+    const merged = stored ? mergeProgress(stored, incoming) : incoming;
+    // The limit holds for what is stored, not only for one request: refuse, keep what is stored.
+    if (Object.keys(record(merged.stops)).length > MAX_STOP_RECORDS) {
+      throw new ApiError(400, 'invalid_request', 'The progress document has too many stops.', {
+        stops: 'invalid_request',
+      });
+    }
+    return merged;
+  }
   if (!stored) return incoming;
   const storedAt = Number(stored.updatedAt);
   const incomingAt = Number(incoming.updatedAt);
@@ -252,5 +309,46 @@ export function resolveDocument(kind: DocumentKind, stored: Doc | null, incoming
       completed: incomingFirst.completed === true || storedFirst.completed === true,
     },
     rewardGranted: incoming.rewardGranted === true || stored.rewardGranted === true,
+  };
+}
+
+type StopRecord = { status: 'inProgress' | 'done'; updatedAt: number; completedAt: number | null };
+
+/** One stop's two records: finished beats unfinished (first completion kept), else the newer. */
+function mergeStop(a: StopRecord, b: StopRecord): StopRecord {
+  if (a.status === 'done' && b.status === 'done') {
+    return {
+      status: 'done',
+      updatedAt: Math.max(a.updatedAt, b.updatedAt),
+      completedAt: Math.min(a.completedAt ?? Infinity, b.completedAt ?? Infinity),
+    };
+  }
+  if (a.status === 'done') return a;
+  if (b.status === 'done') return b;
+  return b.updatedAt > a.updatedAt ? b : a;
+}
+
+/**
+ * Progress merges per stop, whatever the documents' timestamps: the union of both copies' stops,
+ * a finished stop is never undone, and otherwise the newer record wins. Commutative and
+ * idempotent, so a repeated or stale PUT changes nothing. Mirrors the app's `mergeProgress`.
+ */
+export function mergeProgress(stored: Doc, incoming: Doc): Doc {
+  const stops: Record<string, StopRecord> = {
+    ...(record(stored.stops) as Record<string, StopRecord>),
+  };
+  for (const [id, rec] of Object.entries(record(incoming.stops) as Record<string, StopRecord>)) {
+    const mine = stops[id];
+    stops[id] = mine ? mergeStop(mine, rec) : rec;
+  }
+  const sorted = Object.fromEntries(
+    Object.keys(stops)
+      .sort()
+      .map((id) => [id, stops[id]!]),
+  );
+  return {
+    version: 1,
+    updatedAt: Math.max(Number(stored.updatedAt) || 0, Number(incoming.updatedAt) || 0),
+    stops: sorted,
   };
 }

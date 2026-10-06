@@ -104,7 +104,8 @@ function GuardedStack() {
           >
             {/* Route guards: signed-in users with finished onboarding reach the app... */}
             <Stack.Protected guard={signedIn && onboardingDone}>
-              <Stack.Screen name="(app)/home" />
+              <Stack.Screen name="(app)" />
+              <Stack.Screen name="session/[stopId]" />
             </Stack.Protected>
             {/* ...the others walk through onboarding first (resumable at any step). */}
             <Stack.Protected guard={signedIn && !onboardingDone}>

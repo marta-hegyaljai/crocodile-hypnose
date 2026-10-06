@@ -1,6 +1,8 @@
 import { AuthError } from '@/services/auth/types';
 import { createJsonRequest, type JsonRequestOptions } from '@/services/http/jsonRequest';
 
+import { isProgressDoc, type ProgressDoc } from '@/services/progress/types';
+
 import {
   isOnboardingDoc,
   isSettingsDoc,
@@ -13,6 +15,7 @@ import {
 export interface DocumentTypes {
   onboarding: OnboardingDoc;
   settings: SettingsDoc;
+  progress: ProgressDoc;
 }
 
 /**
@@ -32,6 +35,7 @@ export interface ProfileClient {
 const validators: { [K in DocumentKind]: (value: unknown) => value is DocumentTypes[K] } = {
   onboarding: isOnboardingDoc,
   settings: isSettingsDoc,
+  progress: isProgressDoc,
 };
 
 /** ProfileClient for the dev server in `server/`. */

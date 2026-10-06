@@ -6,6 +6,8 @@
 import { AuthError } from '@/services/auth/types';
 import type { DocumentTypes, ProfileClient } from '@/services/profile/profileClient';
 import type { DocumentKind } from '@/services/profile/types';
+import { mergeProgress } from '@/services/progress/mergeProgress';
+import type { ProgressDoc } from '@/services/progress/types';
 
 export interface FakeProfileClient extends ProfileClient {
   /** Stored documents by `${user}:${kind}`. */
@@ -66,6 +68,14 @@ export function createFakeProfileClient(
       await pass();
       const key = `${userOf(accessToken)}:${kind}`;
       const current = documents.get(key);
+      if (kind === 'progress') {
+        // The server merges progress per stop.
+        const merged = current
+          ? mergeProgress(current as ProgressDoc, doc as ProgressDoc)
+          : (doc as ProgressDoc);
+        documents.set(key, merged);
+        return { ...merged } as DocumentTypes[typeof kind];
+      }
       if (current && current.updatedAt > doc.updatedAt) {
         return current as DocumentTypes[typeof kind];
       }

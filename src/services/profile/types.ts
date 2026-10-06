@@ -31,7 +31,7 @@ export const SAFETY_QUESTION_COUNT = 3;
 export type SafetyAnswers = (boolean | null)[];
 
 /** A document kind as the server names it in its routes. */
-export type DocumentKind = 'onboarding' | 'settings';
+export type DocumentKind = 'onboarding' | 'settings' | 'progress';
 
 export interface SyncedDocument {
   version: number;

@@ -132,6 +132,12 @@ async function apiSignUp(
   expect(res.status()).toBe(201);
 }
 
+/** The account actions live on the Profile tab (placeholder until step 8). */
+async function openProfile(page: Page) {
+  await page.getByTestId('tab-profile').click();
+  await expect(page.getByTestId('profile-screen')).toBeVisible();
+}
+
 test.describe('accounts', () => {
   test('sign up, reload, sign out, wrong password, sign in', async ({ page, request }, info) => {
     const errors = collectErrors(page);
@@ -144,9 +150,11 @@ test.describe('accounts', () => {
     await page.reload();
     await expect(page.getByTestId('home-screen')).toBeVisible();
     await expect(page.getByTestId('home-greeting')).toHaveText('Hi, E2E River');
-    await expect(page.getByTestId('home-email')).toContainText(email);
+    await openProfile(page);
+    await expect(page.getByTestId('profile-email')).toContainText(email);
 
-    await page.getByTestId('home-sign-out').click();
+    await openProfile(page);
+    await page.getByTestId('profile-sign-out').click();
     await expect(page.getByTestId('welcome-screen')).toBeVisible();
     // Signed out stays signed out after a reload, and home is out of reach.
     await page.goto('/home');
@@ -294,11 +302,13 @@ test.describe('accounts', () => {
   }, info) => {
     const email = uniqueEmail(info, 'delete');
     await signUpAndFinish(page, request, email);
-    await page.getByTestId('home-delete-account').click();
+    await openProfile(page);
+    await page.getByTestId('profile-delete-account').click();
     await expect(page.getByTestId('delete-confirm')).toBeVisible();
     await page.getByTestId('delete-cancel').click();
-    await expect(page.getByTestId('home-sign-out')).toBeVisible();
-    await page.getByTestId('home-delete-account').click();
+    await expect(page.getByTestId('profile-sign-out')).toBeVisible();
+    await openProfile(page);
+    await page.getByTestId('profile-delete-account').click();
     await page.getByTestId('delete-confirm-button').click();
     await expect(page.getByTestId('welcome-notice-message')).toHaveText(
       'Your account was deleted.',
@@ -377,7 +387,8 @@ test.describe('accounts', () => {
       }
       return route.continue();
     });
-    await page.getByTestId('home-delete-account').click();
+    await openProfile(page);
+    await page.getByTestId('profile-delete-account').click();
     await page.getByTestId('delete-confirm-button').click();
     await expect(page.getByTestId('welcome-notice-message')).toHaveText(
       'Your account was deleted.',
@@ -401,7 +412,8 @@ test.describe('accounts', () => {
     expect(refused).toEqual([]);
 
     // Signing out in one tab signs out the others.
-    await tabs[0]!.getByTestId('home-sign-out').click();
+    await openProfile(tabs[0]!);
+    await tabs[0]!.getByTestId('profile-sign-out').click();
     await expect(page.getByTestId('welcome-screen')).toBeVisible();
     await expect(tabs[1]!.getByTestId('welcome-screen')).toBeVisible();
   });
@@ -436,7 +448,8 @@ test.describe('accounts', () => {
 
   test('double-tapping Sign out lands on Welcome', async ({ page, request }, info) => {
     await signUpAndFinish(page, request, uniqueEmail(info, 'dbl'));
-    await page.getByTestId('home-sign-out').dblclick();
+    await openProfile(page);
+    await page.getByTestId('profile-sign-out').dblclick();
     await expect(page.getByTestId('welcome-screen')).toBeVisible();
     await page.waitForTimeout(600);
     await expect(page.getByTestId('sign-in-screen')).toHaveCount(0);
@@ -448,13 +461,14 @@ test.describe('accounts', () => {
   }, info) => {
     await signUpAndFinish(page, request, uniqueEmail(info, 'focus'));
     const active = () => page.evaluate(() => document.activeElement?.getAttribute('data-testid'));
-    await page.getByTestId('home-delete-account').focus();
+    await openProfile(page);
+    await page.getByTestId('profile-delete-account').focus();
     await page.keyboard.press('Enter');
     await expect.poll(active).toBe('delete-confirm-title');
     await page.keyboard.press('Tab');
     await expect.poll(active).toBe('delete-cancel');
     await page.keyboard.press('Enter');
-    await expect.poll(active).toBe('home-delete-account');
+    await expect.poll(active).toBe('profile-delete-account');
   });
 
   test('password reset from the emailed link', async ({ page, request }, info) => {
@@ -483,7 +497,8 @@ test.describe('accounts', () => {
     await expect(page.getByTestId('home-screen')).toBeVisible();
 
     // The link works once.
-    await page.getByTestId('home-sign-out').click();
+    await openProfile(page);
+    await page.getByTestId('profile-sign-out').click();
     await page.goto(link);
     await page.getByTestId('reset-password').fill('another one 1');
     await page.getByTestId('reset-submit').click();

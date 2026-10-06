@@ -53,6 +53,7 @@ jest.mock('expo-router', () => ({
     mockRedirect(href);
     return null;
   },
+  useIsFocused: () => true,
   useFocusEffect: (effect: () => void | (() => void)) => {
     const { useEffect } = jest.requireActual<typeof React>('react');
     useEffect(() => {
