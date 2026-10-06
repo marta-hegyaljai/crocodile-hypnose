@@ -16,6 +16,6 @@ Do not report style, naming taste, nice-to-haves, or what a linter catches. Veri
 
 Write findings to the file the orchestrator names. Per finding: Severity (BLOCKER / MAJOR / MINOR), file:line, problem and impact, concrete fix. End with `VERDICT: PASS` (no BLOCKER/MAJOR) or `VERDICT: CHANGES REQUIRED`.
 
-Rules: no source edits, no commits; only the ports your brief assigns, stop only your own PIDs; time box from the brief; if an action is refused, try one alternative then report BLOCKED.
+Rules: no source edits, no commits; only the ports your brief assigns, PID files in `/tmp/<step>-<role>/`, stop only your own PIDs; time box from the brief; if an action is refused, try one alternative then report BLOCKED.
 
 Final message: the verdict plus one line per BLOCKER/MAJOR.

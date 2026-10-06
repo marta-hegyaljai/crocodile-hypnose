@@ -72,7 +72,7 @@ Agents are told their time box in the brief. The orchestrator checks on any agen
 7. **Scope stays put.** Work belonging to a later step is sent back unless the orchestrator logged a decision.
 8. **Short briefs, short reports.** The brief names the step, the docs that matter, the base commit, the worktree, the ports and the time box. Reports are short: verdict, commands, findings. No restating of the requirements.
 9. **Trust the fast checks.** Engineers run `npm run check` (+ `npm run server:test` when `server/` changed) plus the targeted e2e specs; the full e2e suite only when the harness or shared flows changed.
-10. **Shared machine, own processes only.** Every agent starts servers on the ports its brief assigns (API `PORT`, web via `npx serve <dir> --listen <port> --single`, `E2E_PORT`), records their PIDs, and stops only those PIDs. `pkill -f`, `killall` or any pattern-based kill is forbidden.
+10. **Shared machine, own processes only.** Every agent starts servers on the ports its brief assigns (API `PORT`, web via `npx serve <dir> --listen <port> --single`, `E2E_PORT`), records their PIDs in a directory only it uses (`/tmp/<step>-<role>/`, never a shared scratchpad), checks a PID's port and cwd before killing it, and stops only those PIDs. `pkill -f`, `killall` or any pattern-based kill is forbidden.
 11. **Copy.** No agent invents marketing copy, slogans or creative names. All text lives in `src/copy` as neutral placeholders until MHP provides the real text.
 12. **Agents don't commit.** The orchestrator commits each round's work with a clear message.
 
