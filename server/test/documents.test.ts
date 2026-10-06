@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { afterEach, beforeEach, describe, test } from 'node:test';
 
-import { CROC_NAME_MAX } from '../src/documents.ts';
+import { CROC_NAME_MAX, MAX_STOP_RECORDS } from '../src/documents.ts';
 import {
   COACHING,
   makeApp,
@@ -382,6 +382,42 @@ describe('GET/PUT /me/progress', () => {
       assert.equal(res.statusCode, 400, JSON.stringify(stops));
     }
     assert.deepEqual((await get('progress')).json(), { progress: null });
+  });
+
+  test('refuses a union over the record limit and keeps what is stored', async () => {
+    const batch = (from: number, n: number) =>
+      Object.fromEntries(
+        Array.from({ length: n }, (_, i) => [
+          `stop-${String(from + i).padStart(5, '0')}`,
+          started(1),
+        ]),
+      );
+    // Each request is within the limit; the stored union must be too.
+    for (let from = 0; from < MAX_STOP_RECORDS; from += 500) {
+      assert.equal((await put('progress', progress(batch(from, 500)))).statusCode, 200);
+    }
+    const before = await stopsOf();
+    assert.equal(Object.keys(before).length, MAX_STOP_RECORDS);
+    const over = await put('progress', progress(batch(MAX_STOP_RECORDS, 5)));
+    assert.equal(over.statusCode, 400);
+    assert.equal(over.json<ErrorJson>().error.code, 'invalid_request');
+    assert.deepEqual(over.json<ErrorJson>().error.fields, { stops: 'invalid_request' });
+    assert.deepEqual(await stopsOf(), before);
+    // Known ids still merge at the limit (a finished stop is not refused).
+    const finish = await put('progress', progress({ 'stop-00000': done(at()) }));
+    assert.equal(finish.statusCode, 200);
+    assert.equal(Object.keys(await stopsOf()).length, MAX_STOP_RECORDS);
+  });
+
+  test('accepts a full-size progress document within the body limit', async () => {
+    const stops = Object.fromEntries(
+      Array.from({ length: MAX_STOP_RECORDS }, (_, i) => [
+        `${String(i).padStart(5, '0')}-${'x'.repeat(58)}`,
+        done(Number.MAX_SAFE_INTEGER - 1),
+      ]),
+    );
+    const res = await put('progress', progress(stops));
+    assert.equal(res.statusCode, 200);
   });
 
   test('is per user', async () => {

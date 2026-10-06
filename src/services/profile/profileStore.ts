@@ -31,6 +31,11 @@ export interface ProfileState {
   userId: string | null;
   onboarding: OnboardingDoc;
   settings: SettingsDoc;
+  /**
+   * The settings are the user's own (a device copy or the server's), not the defaults standing in
+   * while they load. Until then, safety choices must come from the onboarding answers.
+   */
+  settingsKnown: boolean;
   /** Progress along the river (started and finished stops). */
   progress: ProgressDoc;
   /** Any document has a change the server has not confirmed. */
@@ -127,6 +132,7 @@ export function createProfileStore({
       set({
         onboarding: o.doc,
         settings: s.doc,
+        settingsKnown: s.source !== 'none',
         progress: p.doc,
         dirty: o.dirty || s.dirty || p.dirty,
         syncError: o.syncError ?? s.syncError ?? p.syncError ?? null,
@@ -142,6 +148,7 @@ export function createProfileStore({
       userId: null,
       onboarding: defaultOnboarding(),
       settings: defaultSettings(),
+      settingsKnown: false,
       progress: defaultProgress(),
       dirty: false,
       syncError: null,

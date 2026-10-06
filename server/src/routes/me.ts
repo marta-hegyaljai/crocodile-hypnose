@@ -5,6 +5,7 @@ import {
   bodySchemaFor,
   checkDocumentRules,
   DOCUMENT_KINDS,
+  PROGRESS_BODY_LIMIT,
   resolveDocument,
   type DocumentKind,
 } from '../documents.ts';
@@ -54,7 +55,11 @@ export async function meRoutes(app: FastifyInstance, { service, now = Date.now }
 
     app.put<{ Body: Record<string, unknown> & { version: number; updatedAt: number } }>(
       `/me/${kind}`,
-      { schema: { body: bodySchemaFor(kind) } },
+      {
+        schema: { body: bodySchemaFor(kind) },
+        // Progress is the only document that grows with use; the others keep the global limit.
+        ...(kind === 'progress' ? { bodyLimit: PROGRESS_BODY_LIMIT } : {}),
+      },
       async (req) => {
         const { user } = await service.authenticate(bearer(req));
         const at = now();

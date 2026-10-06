@@ -87,6 +87,24 @@ describe('progress sync', () => {
     await loading;
   });
 
+  it('a write the server refuses (record limit) is not retried in a loop', async () => {
+    const { device, client } = await setup();
+    const phone = device();
+    await phone.getState().load('user-1', { fresh: true });
+    client.put = async () => {
+      client.calls.put += 1;
+      throw new AuthError('invalid_request', { status: 400, fields: { stops: 'invalid_request' } });
+    };
+    await phone.getState().updateProgress((d) => markStarted(d, 'intro-1', 100));
+    await flush();
+    const puts = client.calls.put;
+    await new Promise((r) => setTimeout(r, 60));
+    expect(client.calls.put).toBe(puts);
+    expect(phone.getState().dirty).toBe(true);
+    // The progress stays on the device.
+    expect(phone.getState().progress.stops['intro-1']?.status).toBe('inProgress');
+  });
+
   it('a stale tab or device can never undo a finished stop', async () => {
     const { device, server } = await setup();
     const shared = sharedStorage();

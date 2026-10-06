@@ -175,6 +175,8 @@ const settingsV1 = {
 export const STOP_ID_PATTERN = '^[a-z0-9-]{1,64}$';
 /** Far above any content pack; keeps one document bounded. */
 export const MAX_STOP_RECORDS = 2000;
+/** Body budget for `PUT /me/progress`: 2000 records at their longest (about 150 B each) fit. */
+export const PROGRESS_BODY_LIMIT = 320 * 1024;
 
 /**
  * Progress along the river, v1: one record per stop the user has started or finished. Merged per
@@ -275,7 +277,16 @@ const stepIndex = (step: unknown) =>
  * Returns null to keep what is stored.
  */
 export function resolveDocument(kind: DocumentKind, stored: Doc | null, incoming: Doc): Doc | null {
-  if (kind === 'progress') return stored ? mergeProgress(stored, incoming) : incoming;
+  if (kind === 'progress') {
+    const merged = stored ? mergeProgress(stored, incoming) : incoming;
+    // The limit holds for what is stored, not only for one request: refuse, keep what is stored.
+    if (Object.keys(record(merged.stops)).length > MAX_STOP_RECORDS) {
+      throw new ApiError(400, 'invalid_request', 'The progress document has too many stops.', {
+        stops: 'invalid_request',
+      });
+    }
+    return merged;
+  }
   if (!stored) return incoming;
   const storedAt = Number(stored.updatedAt);
   const incomingAt = Number(incoming.updatedAt);
