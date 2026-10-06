@@ -44,7 +44,7 @@ A step is one item from `PLAN.md` → Steps (or a tightly coupled bundle). Its i
                       [4] Orchestrator: checks green, merges to main, marks status, pushes
 ```
 
-**Pipelining.** While step N is in review/QA/design, the engineer for step N+1 starts in its own git worktree (`../crocodile-hypnose-wt/S<nn>`, branch `step/S<nn>`), as long as N+1 doesn't depend on unmerged code from N. The orchestrator merges `main` into a step branch before its review starts if `main` moved. `claude/fervent-rubin-7i8lut` is the integration branch and is kept equal to `main`.
+**Pipelining.** While step N is in review/QA/design, the engineer for step N+1 starts in its own git worktree (`../crocodile-hypnose-wt/S<nn>`, branch `step/S<nn>`), as long as N+1 doesn't depend on unmerged code from N. The orchestrator merges `main` into a step branch before its review starts if `main` moved. Because `main` takes squash merges, a step branched from another unmerged step is brought up to date with `git rebase --onto origin/main <parent-step-tip> step/S<nn>` (only its own commits are replayed), not a merge. `claude/fervent-rubin-7i8lut` is the integration branch and is kept equal to `main`.
 
 ## Time boxes
 
