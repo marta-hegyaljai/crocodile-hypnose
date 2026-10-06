@@ -36,3 +36,9 @@
 | 3 | QA r1 m14 | Desktop 1280x800 (not a required size): the jungle leaf covers the start of the hatch title. |
 | 3 | QA r2 | Egg focus ring low contrast over dark water (designer may take it in S03 polish). |
 | 3 | QA r2 | Mood-after picked but not confirmed is lost on reload. |
+| 4 | Review r1 #3 | Clamp per-stop `completedAt` on the server (≤ stop `updatedAt`); don't clamp `updatedAt` (push loop). |
+| 4 | Review r1 #4 | Caution mode: Replay offered for finished unsuitable stops; decide with the owner's caution-mode decision (S08). |
+| 4 | QA r1 m5/m6 | No zone-complete moment; coming-soon goal falls back to Intro with no explanation; tapping coming-soon zones gives no feedback. |
+| 4 | QA r1 m7 | Web cold reload offline needs a service worker. |
+| 4 | QA r1 m8 | Stale tab/device doesn't refresh progress until reload (refetch on focus/visibility). |
+| 4 | QA r1 m11 | Keyboard: ~19 stop nodes before the tabs; sheet backdrop is a tab stop. |
