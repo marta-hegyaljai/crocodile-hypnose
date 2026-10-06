@@ -51,6 +51,20 @@ We don't know yet which auth system MHP Coaching uses. So:
 - Gamified everywhere: points, croc growth, habitat decorations, weekly goal, badges, satisfying reward moments. Never punishing (no lost streaks, no guilt).
 - Very easy: one tap from home to playing today's session. Tap targets ≥ 44px. WCAG AA contrast. Screen-reader labels. Reduced-motion support.
 
+## Status
+
+| Step | Status | Evidence |
+| --- | --- | --- |
+| S01 Foundation and design system | DONE | 2026-10-05, review r2 + QA r2 + design r1 PASS (`docs/build/reviews/step-01-*`) |
+| S02 Accounts | DONE | 2026-10-06, review r3 + QA r2 + design r1 PASS (`docs/build/reviews/step-02-*`) |
+| S03 Onboarding | IN REVIEW (round 2 re-check, then design) | fix round 1 in `main` 93232aa |
+| S04 Home and river map | IN PROGRESS | |
+| S05 Sessions | TODO | |
+| S06 Mini-games | TODO | |
+| S07 Gamification | TODO | |
+| S08 Profile and settings | TODO | |
+| S09 Release polish | TODO | |
+
 ## Steps
 
 Each step has a brief in `docs/build/steps/step-XX.md` written by the orchestrator, with acceptance criteria.
