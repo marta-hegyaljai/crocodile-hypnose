@@ -37,7 +37,8 @@ const LOOK: Record<StopStatus, { face: string; edge: string; ink: string; ring?:
   },
   inProgress: { face: palette.white, edge: '#8DB9AC', ink: palette.crocGreen, ring: palette.amber },
   locked: { face: palette.mistDeep, edge: '#A3B5A8', ink: palette.mistTextMuted },
-  caution: { face: palette.mistLight, edge: '#B9C7BD', ink: palette.mistTextMuted },
+  // Not suggested (caution mode): a pale rose pebble with a dashed outline and a "skip" badge.
+  caution: { face: palette.lilyMist, edge: '#C9A3AE', ink: '#8C6F77', ring: '#C98FA0' },
 };
 
 /** The pulse around the current stop: a soft ring that swells and fades (static with reduced motion). */
@@ -126,8 +127,9 @@ export const StopNode = memo(function StopNode({
               borderRadius: size / 2,
               backgroundColor: look.face,
               borderColor: look.ring ?? 'transparent',
-              borderWidth: look.ring ? (current ? 4 : 3) : 0,
+              borderWidth: look.ring ? (current ? 4 : status === 'caution' ? 2 : 3) : 0,
               borderStyle: status === 'caution' ? 'dashed' : 'solid',
+              opacity: status === 'caution' ? 0.92 : 1,
             },
             faceStyle,
           ]}
@@ -142,6 +144,11 @@ export const StopNode = memo(function StopNode({
           )}
           {focus.focused ? <FocusRing radius={size / 2} /> : null}
         </Animated.View>
+        {status === 'caution' ? (
+          <View pointerEvents="none" style={styles.cautionBadge}>
+            <Icon name="alert" size={13} color={palette.lilyInk} strokeWidth={2.4} />
+          </View>
+        ) : null}
       </Pressable>
     </View>
   );
@@ -152,6 +159,19 @@ const styles = StyleSheet.create({
   pulse: { position: 'absolute', top: 0, left: 0 },
   edge: { position: 'absolute', top: 5, left: 0 },
   face: { alignItems: 'center', justifyContent: 'center', overflow: 'visible' },
+  cautionBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: palette.white,
+    borderWidth: 1.5,
+    borderColor: '#C98FA0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   gloss: {
     position: 'absolute',
     top: 4,

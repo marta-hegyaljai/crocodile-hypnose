@@ -15,12 +15,14 @@ import { usePressDepth } from '@/ui/usePressDepth';
 export interface TodayCardProps {
   today: TodaysSession | null;
   onPlay: (today: TodaysSession) => void;
+  /** Tighter padding and a smaller play button on short screens. */
+  compact?: boolean;
 }
 
 const PLAY = 60;
 
 /** Today's session: what it is, and one big amber play button. The whole card is the button. */
-export function TodayCard({ today, onPlay }: TodayCardProps) {
+export function TodayCard({ today, onPlay, compact = false }: TodayCardProps) {
   const { colors } = useTheme();
   const focus = useFocusRing();
   const press = usePressDepth();
@@ -56,7 +58,12 @@ export function TodayCard({ today, onPlay }: TodayCardProps) {
       testID="today-play"
     >
       <View
-        style={[styles.card, styles.cardEdge, { backgroundColor: colors.surface }]}
+        style={[
+          styles.card,
+          styles.cardEdge,
+          compact && styles.cardCompact,
+          { backgroundColor: colors.surface },
+        ]}
         testID="today-card"
       >
         <View style={[styles.glyph, stop.type === 'longTrance' && styles.glyphLong]}>
@@ -105,6 +112,7 @@ const styles = StyleSheet.create({
     paddingRight: space.md,
     minHeight: 88,
   },
+  cardCompact: { minHeight: 72, paddingVertical: space.sm },
   cardEdge: {
     borderBottomWidth: 4,
     borderColor: '#C9D9CB',

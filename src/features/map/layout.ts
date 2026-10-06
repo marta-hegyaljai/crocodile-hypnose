@@ -23,6 +23,8 @@ export interface ZoneLayout {
 export interface MapLayout {
   width: number;
   height: number;
+  /** 1 on phones; nodes, river and props grow with it on wide screens (tablets). */
+  scale: number;
   zones: ZoneLayout[];
 }
 
@@ -34,7 +36,7 @@ export interface LayoutZoneInput {
 
 export const NODE_SIZE = 64;
 export const LONG_TRANCE_SIZE = 92;
-const HEADER = 92;
+const HEADER = 108;
 const GAP = 112;
 const LONG_GAP = 136;
 const FOOT = 64;
@@ -46,10 +48,18 @@ export const GHOST_NODES = 3;
  * Lays the river out: each zone is a band with its header sign on top and its stops winding
  * left and right of the middle. Pure (numbers only), so it is cheap to memoise and easy to test.
  */
+/** Nodes and the river grow a little on wide screens, so a tablet map is not a phone map stretched. */
+export function mapScale(width: number): number {
+  return width >= 700 ? 1.3 : width >= 560 ? 1.15 : 1;
+}
+
 export function layoutMap(zones: LayoutZoneInput[], width: number): MapLayout {
   const mid = width / 2;
+  const scale = mapScale(width);
   // How far the river swings: wide enough to feel like a winding river, never off-screen.
-  const swing = Math.max(48, Math.min(width * 0.26, 150));
+  const swing = Math.max(48, Math.min(width * 0.27, 150 * scale));
+  const gap = Math.round(GAP * scale);
+  const longGap = Math.round(LONG_GAP * scale);
   let top = 0;
   let phase = 0;
   const out: ZoneLayout[] = [];
@@ -65,10 +75,10 @@ export function layoutMap(zones: LayoutZoneInput[], width: number): MapLayout {
       : zone.stops;
     items.forEach((stop, i) => {
       const long = stop.type === 'longTrance';
-      const size = long ? LONG_TRANCE_SIZE : NODE_SIZE;
+      const size = Math.round((long ? LONG_TRANCE_SIZE : NODE_SIZE) * scale);
       // The finale sits in the middle of the river; the others swing side to side.
       const x = long ? mid : mid + swing * Math.sin(phase + i * 1.15 + 0.6);
-      if (i > 0) y += long ? LONG_GAP : zone.comingSoon ? 70 : GAP;
+      if (i > 0) y += long ? longGap : zone.comingSoon ? Math.round(70 * scale) : gap;
       nodes.push({ stopId: stop.id, x: Math.round(x), y: Math.round(y), size });
       river.push({ x: Math.round(x), y: Math.round(y) });
     });
@@ -78,7 +88,7 @@ export function layoutMap(zones: LayoutZoneInput[], width: number): MapLayout {
     top += height;
     phase += 1.7;
   }
-  return { width, height: top, zones: out };
+  return { width, height: top, scale, zones: out };
 }
 
 /** The map y of a stop's node centre, or null when it is not on the map. */

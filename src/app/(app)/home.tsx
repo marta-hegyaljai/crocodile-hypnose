@@ -1,6 +1,6 @@
 import { router, useIsFocused } from 'expo-router';
 import React, { useCallback, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { t } from '@/copy';
@@ -32,6 +32,8 @@ export default function HomeScreen() {
     (s) => s.dirty && isAuthError(s.syncError) && s.syncError.isConnectivity,
   );
   const { journey, today } = useJourney();
+  // On a short screen (e.g. 360x640) the top block tightens so more of the river shows.
+  const compact = useWindowDimensions().height < 720;
   const [selected, setSelected] = useState<StopView | null>(null);
   const focused = useIsFocused();
 
@@ -58,12 +60,24 @@ export default function HomeScreen() {
 
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]} testID="home-screen">
-      <View style={[styles.top, { paddingTop: insets.top + space.sm }]}>
+      <View
+        style={[
+          styles.top,
+          compact && styles.topCompact,
+          { paddingTop: insets.top + (compact ? space.xs : space.sm) },
+        ]}
+      >
         <HomeHeader crocName={crocName} />
-        <Text variant="heading" heading numberOfLines={1} placeholder testID="home-greeting">
+        <Text
+          variant={compact ? 'subheading' : 'heading'}
+          heading
+          numberOfLines={1}
+          placeholder
+          testID="home-greeting"
+        >
           {t('home.greeting', { name })}
         </Text>
-        <TodayCard today={today} onPlay={onPlay} />
+        <TodayCard today={today} onPlay={onPlay} compact={compact} />
         {pendingOffline ? (
           <Text variant="caption" tone="secondary" testID="home-sync-pending">
             {t('home.syncPending')}
@@ -83,6 +97,7 @@ export default function HomeScreen() {
       <StopSheet
         view={selected}
         zoneTitle={selectedZone ? t(selectedZone.titleKey) : ''}
+        current={!!selected && selected.stop.id === today?.stop.id}
         onStart={onSheetStart}
         onClose={closeSheet}
       />
@@ -101,4 +116,5 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     zIndex: 1,
   },
+  topCompact: { paddingBottom: space.sm, gap: space.xs },
 });

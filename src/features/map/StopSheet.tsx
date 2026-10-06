@@ -15,6 +15,8 @@ export interface StopSheetProps {
   /** The stop to show; null hides the sheet. */
   view: StopView | null;
   zoneTitle: string;
+  /** True for today's stop: the sheet says "You are here". */
+  current?: boolean;
   onStart: (view: StopView) => void;
   onClose: () => void;
 }
@@ -34,7 +36,7 @@ function lockText(reason: LockReason): string {
  * The bottom sheet for a tapped stop: its type, length and state, and Start (or why it is
  * locked). Focus moves into it when it opens; Escape, the backdrop and Close dismiss it.
  */
-export function StopSheet({ view, zoneTitle, onStart, onClose }: StopSheetProps) {
+export function StopSheet({ view, zoneTitle, current = false, onStart, onClose }: StopSheetProps) {
   const { colors, shadow } = useTheme();
   const insets = useSafeAreaInsets();
   const reduced = useReducedMotion();
@@ -129,6 +131,9 @@ export function StopSheet({ view, zoneTitle, onStart, onClose }: StopSheetProps)
             </View>
           </View>
           <View style={styles.chips}>
+            {current ? (
+              <Chip label={t('map.current')} tone="points" icon="drop" testID="stop-sheet-here" />
+            ) : null}
             <Chip
               label={typeLabel(stop.type)}
               tone="goal"
