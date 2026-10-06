@@ -11,7 +11,7 @@ import { WEEKLY_GOAL_DAYS, daysActiveThisWeek, placeholderPoints } from './stats
 
 /** The croc's avatar and name, the points chip and the weekly-goal chip. */
 export function HomeHeader({ crocName }: { crocName: string }) {
-  const points = useProfile((s) => placeholderPoints(s.onboarding));
+  const points = useProfile((s) => placeholderPoints(s.onboarding, s.sessions));
   const days = useProfile((s) => daysActiveThisWeek(s.progress, Date.now()));
   return (
     <View style={styles.row}>

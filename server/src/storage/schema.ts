@@ -5,7 +5,7 @@
  * App data tables added later (croc, points, check-ins) reference users(id) ON DELETE CASCADE too,
  * so deleting an account removes everything.
  */
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
 
 export const SCHEMA_V1 = `
 CREATE TABLE IF NOT EXISTS users (
@@ -82,5 +82,28 @@ CREATE TABLE IF NOT EXISTS user_documents (
 );
 `;
 
+/**
+ * v4: append-only per-user event streams (`events`: session completions, the input of the points
+ * ledger; `mood`: mood check-ins, health data stored only with consent). Each event has a
+ * client-made id, so sending it again changes nothing.
+ */
+export const SCHEMA_V4 = `
+CREATE TABLE IF NOT EXISTS user_events (
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  stream TEXT NOT NULL,
+  id TEXT NOT NULL,
+  data TEXT NOT NULL,
+  at BIGINT NOT NULL,
+  stored_at BIGINT NOT NULL,
+  PRIMARY KEY (user_id, stream, id)
+);
+CREATE INDEX IF NOT EXISTS user_events_at_idx ON user_events (user_id, stream, at);
+`;
+
 /** Migration for each version, applied in order from the database's current version. */
-export const MIGRATIONS: Record<number, string> = { 1: SCHEMA_V1, 2: SCHEMA_V2, 3: SCHEMA_V3 };
+export const MIGRATIONS: Record<number, string> = {
+  1: SCHEMA_V1,
+  2: SCHEMA_V2,
+  3: SCHEMA_V3,
+  4: SCHEMA_V4,
+};

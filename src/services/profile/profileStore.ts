@@ -5,12 +5,27 @@ import type { SessionManager } from '@/services/auth/sessionManager';
 import type { KeyValueStorage } from '@/services/auth/storage';
 import { isAuthError } from '@/services/auth/types';
 
+import {
+  addToLog,
+  confirmedLog,
+  emptyLog,
+  isEventLogDoc,
+  mergeLogs,
+  pushLog,
+} from '@/services/events/eventLog';
+import {
+  isMoodEntry,
+  isSessionCompletedEvent,
+  type EventLogDoc,
+  type MoodEntry,
+  type SessionCompletedEvent,
+} from '@/services/events/types';
 import { mergeProgress } from '@/services/progress/mergeProgress';
 import { defaultProgress, isProgressDoc, type ProgressDoc } from '@/services/progress/types';
 
 import { createDocumentStore, type DocumentState } from './documentStore';
 import { mergeOnboarding } from './mergeOnboarding';
-import type { ProfileClient } from './profileClient';
+import type { ProfileClient, StreamKind, StreamTypes } from './profileClient';
 import {
   defaultOnboarding,
   defaultSettings,
@@ -38,6 +53,10 @@ export interface ProfileState {
   settingsKnown: boolean;
   /** Progress along the river (started and finished stops). */
   progress: ProgressDoc;
+  /** "Session completed" events (the input of the points ledger). */
+  sessions: EventLogDoc<SessionCompletedEvent>;
+  /** Mood check-ins; only recorded with consent (health data). */
+  moods: EventLogDoc<MoodEntry>;
   /** Any document has a change the server has not confirmed. */
   dirty: boolean;
   /** The last sync failure, if the latest attempt failed. */
@@ -51,6 +70,10 @@ export interface ProfileState {
   updateSettings(change: (doc: SettingsDoc) => SettingsDoc): Promise<void>;
   /** Applies a progress change (see `markStarted` / `markDone`); returning the same doc is a no-op. */
   updateProgress(change: (doc: ProgressDoc) => ProgressDoc): Promise<void>;
+  /** Records a finished session once (an id already recorded changes nothing). */
+  recordSession(event: SessionCompletedEvent): Promise<void>;
+  /** Records a mood check-in once. The caller checks consent. */
+  recordMood(entry: MoodEntry): Promise<void>;
   /** Asks the server now: pending reads first, then pending writes (e.g. when back online). */
   flush(): Promise<void>;
   /** Forgets everything, including the device copies (they hold health data). */
@@ -71,6 +94,8 @@ export interface ProfileStoreOptions {
 export const ONBOARDING_KEY = 'mhp.hypnose.onboarding.v1';
 export const SETTINGS_KEY = 'mhp.hypnose.settings.v1';
 export const PROGRESS_KEY = 'mhp.hypnose.progress.v1';
+export const SESSIONS_KEY = 'mhp.hypnose.sessions.v1';
+export const MOODS_KEY = 'mhp.hypnose.moods.v1';
 
 /**
  * The signed-in user's documents, as one store for screens. Each document is its own synced
@@ -121,7 +146,28 @@ export function createProfileStore({
     debounceMs,
     retryMs,
   });
-  const docs = [onboarding, settings, progress] as const;
+  // Append-only streams, synced as logs: union by id, unconfirmed events are sent until stored.
+  const eventLog = <S extends StreamKind>(
+    stream: S,
+    key: string,
+    validateItem: (value: unknown) => value is StreamTypes[S],
+  ) =>
+    createDocumentStore<EventLogDoc<StreamTypes[S]>>({
+      key,
+      storage,
+      defaults: () => emptyLog(),
+      validate: isEventLogDoc(validateItem),
+      fetch: async () => confirmedLog(await withToken((token) => client.listEvents(stream, token))),
+      push: (_user, doc) =>
+        pushLog(doc, (items) => withToken((token) => client.appendEvents(stream, items, token))),
+      merge: mergeLogs,
+      now,
+      debounceMs,
+      retryMs,
+    });
+  const sessions = eventLog('events', SESSIONS_KEY, isSessionCompletedEvent);
+  const moods = eventLog('mood', MOODS_KEY, isMoodEntry);
+  const docs = [onboarding, settings, progress, sessions, moods] as const;
   let generation = 0;
 
   const store = createStore<ProfileState>()((set, get) => {
@@ -129,19 +175,25 @@ export function createProfileStore({
       const o = onboarding.getState();
       const s = settings.getState();
       const p = progress.getState();
+      const e = sessions.getState();
+      const m = moods.getState();
       set({
+        sessions: e.doc,
+        moods: m.doc,
         onboarding: o.doc,
         settings: s.doc,
         settingsKnown: s.source !== 'none',
         progress: p.doc,
-        dirty: o.dirty || s.dirty || p.dirty,
-        syncError: o.syncError ?? s.syncError ?? p.syncError ?? null,
+        dirty: o.dirty || s.dirty || p.dirty || e.dirty || m.dirty,
+        syncError: o.syncError ?? s.syncError ?? p.syncError ?? e.syncError ?? null,
         loadError: get().status === 'loading' ? (o.syncError ?? null) : null,
       });
     };
     onboarding.subscribe(mirror);
     settings.subscribe(mirror);
     progress.subscribe(mirror);
+    sessions.subscribe(mirror);
+    moods.subscribe(mirror);
 
     return {
       status: 'idle',
@@ -150,6 +202,8 @@ export function createProfileStore({
       settings: defaultSettings(),
       settingsKnown: false,
       progress: defaultProgress(),
+      sessions: emptyLog(),
+      moods: emptyLog(),
       dirty: false,
       syncError: null,
       loadError: null,
@@ -174,9 +228,15 @@ export function createProfileStore({
       updateOnboarding: (change) => onboarding.getState().update(change),
       updateSettings: (change) => settings.getState().update(change),
       updateProgress: (change) => progress.getState().update(change),
+      recordSession: (event) => sessions.getState().update((doc) => addToLog(doc, event)),
+      recordMood: (entry) => moods.getState().update((doc) => addToLog(doc, entry)),
 
       async flush() {
-        await Promise.all(docs.map((d) => d.getState().flush()));
+        // The documents first: the server checks mood consent against the stored settings.
+        await Promise.all(
+          [onboarding, settings, progress, sessions].map((d) => d.getState().flush()),
+        );
+        await moods.getState().flush();
       },
 
       async reset() {

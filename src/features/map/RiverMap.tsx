@@ -19,6 +19,8 @@ import { palette, radius, space } from '@/theme';
 import { Text } from '@/ui';
 
 import { layoutMap, nodeY, type MapLayout } from './layout';
+import { useUnlocked } from '@/features/session/unlock';
+
 import { StopNode } from './StopNode';
 import { stopA11yLabel } from './stopLabels';
 import { ZoneScenery } from './ZoneScenery';
@@ -219,6 +221,7 @@ export function RiverMap({
   active = true,
   testID,
 }: RiverMapProps) {
+  const unlocked = useUnlocked();
   const reduced = useReducedMotion();
   const [size, setSize] = useState<{ width: number; height: number } | null>(null);
   const scroll = useRef<ScrollView>(null);
@@ -372,6 +375,7 @@ export function RiverMap({
                           size={n.size}
                           accessibilityLabel={stopA11yLabel(sv, current)}
                           onPress={handlePress}
+                          unlocking={unlocked.includes(n.stopId)}
                         />
                       );
                     })}

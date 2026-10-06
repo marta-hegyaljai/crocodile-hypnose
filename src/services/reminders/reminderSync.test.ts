@@ -55,31 +55,25 @@ describe('reminder sync', () => {
     await auth.getState().signUp({ email: 'ann@example.com', password: 'secret12' });
     await flush();
     expect(reminders.log).toEqual([]);
-    await profile
-      .getState()
-      .updateSettings((s) => ({
-        ...s,
-        reminder: { enabled: true, time: '08:00', timeOfDay: 'morning' },
-      }));
+    await profile.getState().updateSettings((s) => ({
+      ...s,
+      reminder: { enabled: true, time: '08:00', timeOfDay: 'morning' },
+    }));
     expect(reminders.log).toEqual(['schedule 08:00']);
     // The same settings again: nothing happens (idempotent).
     await profile.getState().updateSettings((s) => ({ ...s, sound: false }));
     expect(reminders.log).toEqual(['schedule 08:00']);
     // Evening person now: rescheduled.
-    await profile
-      .getState()
-      .updateSettings((s) => ({
-        ...s,
-        reminder: { enabled: true, time: '20:30', timeOfDay: 'evening' },
-      }));
+    await profile.getState().updateSettings((s) => ({
+      ...s,
+      reminder: { enabled: true, time: '20:30', timeOfDay: 'evening' },
+    }));
     expect(reminders.log).toEqual(['schedule 08:00', 'schedule 20:30']);
     // "Not now" after all: cancelled.
-    await profile
-      .getState()
-      .updateSettings((s) => ({
-        ...s,
-        reminder: { enabled: false, time: '20:30', timeOfDay: 'evening' },
-      }));
+    await profile.getState().updateSettings((s) => ({
+      ...s,
+      reminder: { enabled: false, time: '20:30', timeOfDay: 'evening' },
+    }));
     expect(reminders.log).toEqual(['schedule 08:00', 'schedule 20:30', 'cancel']);
   });
 
@@ -87,12 +81,10 @@ describe('reminder sync', () => {
     const { auth, profile, reminders } = await setup();
     await auth.getState().signUp({ email: 'ann@example.com', password: 'secret12' });
     await flush();
-    await profile
-      .getState()
-      .updateSettings((s) => ({
-        ...s,
-        reminder: { enabled: true, time: '08:00', timeOfDay: 'morning' },
-      }));
+    await profile.getState().updateSettings((s) => ({
+      ...s,
+      reminder: { enabled: true, time: '08:00', timeOfDay: 'morning' },
+    }));
     await auth.getState().signOut();
     await flush();
     expect(reminders.log).toEqual(['schedule 08:00', 'cancel']);

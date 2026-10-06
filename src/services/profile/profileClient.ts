@@ -1,6 +1,12 @@
 import { AuthError } from '@/services/auth/types';
 import { createJsonRequest, type JsonRequestOptions } from '@/services/http/jsonRequest';
 
+import {
+  isMoodEntry,
+  isSessionCompletedEvent,
+  type MoodEntry,
+  type SessionCompletedEvent,
+} from '@/services/events/types';
 import { isProgressDoc, type ProgressDoc } from '@/services/progress/types';
 
 import {
@@ -18,8 +24,15 @@ export interface DocumentTypes {
   progress: ProgressDoc;
 }
 
+/** The append-only streams and their events (`GET/POST /me/events`, `/me/mood`). */
+export interface StreamTypes {
+  events: SessionCompletedEvent;
+  mood: MoodEntry;
+}
+export type StreamKind = keyof StreamTypes;
+
 /**
- * Transport for the per-user documents. `get` resolves null when the server has none; `put`
+ * Transport for the per-user documents and event streams. `get` resolves null when the server has none; `put`
  * resolves what the server stores afterwards (the sent document, or a newer one it already had).
  * Both throw AuthError (offline, unreachable, unauthorized, invalid_request...).
  */
@@ -30,7 +43,21 @@ export interface ProfileClient {
     doc: DocumentTypes[K],
     accessToken: string,
   ): Promise<DocumentTypes[K]>;
+  /** The stream's latest events (as the server stored them). */
+  listEvents<S extends StreamKind>(stream: S, accessToken: string): Promise<StreamTypes[S][]>;
+  /** Appends events; resolves what the server stored for each (a known id keeps its version). */
+  appendEvents<S extends StreamKind>(
+    stream: S,
+    items: StreamTypes[S][],
+    accessToken: string,
+  ): Promise<StreamTypes[S][]>;
 }
+
+const streamField: Record<StreamKind, string> = { events: 'events', mood: 'entries' };
+const streamValidators: { [S in StreamKind]: (value: unknown) => value is StreamTypes[S] } = {
+  events: isSessionCompletedEvent,
+  mood: isMoodEntry,
+};
 
 const validators: { [K in DocumentKind]: (value: unknown) => value is DocumentTypes[K] } = {
   onboarding: isOnboardingDoc,
@@ -57,7 +84,31 @@ export function createHttpProfileClient(options: JsonRequestOptions): ProfileCli
     return doc;
   }
 
+  function parseStream<S extends StreamKind>(stream: S, body: unknown): StreamTypes[S][] {
+    const raw = (body as Record<string, unknown> | undefined)?.[streamField[stream]];
+    if (!Array.isArray(raw)) {
+      throw new AuthError('server_error', { message: `malformed ${stream} answer` });
+    }
+    // Events of a shape this app version does not know are left out (the server keeps them).
+    return raw
+      .map((item): unknown => {
+        const { storedAt: _storedAt, ...rest } = (item ?? {}) as Record<string, unknown>;
+        return rest;
+      })
+      .filter((item): item is StreamTypes[S] => streamValidators[stream](item));
+  }
+
   return {
+    async listEvents(stream, accessToken) {
+      return parseStream(stream, await request('GET', `/me/${stream}`, { accessToken }));
+    },
+    async appendEvents(stream, items, accessToken) {
+      const body = await request('POST', `/me/${stream}`, {
+        body: { [streamField[stream]]: items },
+        accessToken,
+      });
+      return parseStream(stream, body);
+    },
     async get(kind, accessToken) {
       const body = await request('GET', `/me/${kind}`, { accessToken });
       return parse(kind, body);

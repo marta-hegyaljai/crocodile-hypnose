@@ -5,7 +5,8 @@ import {
   type AudioPlayer,
   type AudioSource,
 } from 'expo-audio';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type MutableRefObject } from 'react';
+import { Platform } from 'react-native';
 
 /**
  * One track for a session, in two parts so that playback status updates (several a second) only
@@ -16,7 +17,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
  *   the safety nets: when the audio never loads or never moves after `play()` (a missing codec,
  *   a browser that blocked playback), the session carries on as a silent timer of the same
  *   length, so it always reaches its end.
- * Step 5's full player replaces the first-session screen; these hooks are its seed.
+ * Both the onboarding first session and the session player (step 5) use them.
  */
 
 export interface Track {
@@ -31,15 +32,35 @@ export interface Track {
   pause(): void;
   /** Gives up on the audio: the track continues silently (set by the status watch). */
   goSilent(): void;
+  /** Jumps to a position (seconds); applied as soon as the audio (or the silent timer) can. */
+  seekTo(seconds: number): void;
+  /** The latest known position and length (seconds), for controls that act on them. */
+  positionRef: MutableRefObject<number>;
+  durationRef: MutableRefObject<number>;
+  /** A pending jump, for the status watch. */
+  seekRequest: { to: number; n: number } | null;
+}
+
+export interface TrackOptions {
+  /** Shown on the lock screen and in the system's media controls (native). */
+  title?: string;
 }
 
 const TICK_MS = 250;
 
-export function useTrack(source: AudioSource, fallbackDurationSec: number): Track {
+export function useTrack(
+  source: AudioSource,
+  fallbackDurationSec: number,
+  options: TrackOptions = {},
+): Track {
   const player = useAudioPlayer(source, { updateInterval: TICK_MS });
   const [wanted, setWanted] = useState(false);
   const [silent, setSilent] = useState(false);
+  const [seekRequest, setSeekRequest] = useState<{ to: number; n: number } | null>(null);
+  const positionRef = useRef(0);
+  const durationRef = useRef(fallbackDurationSec);
   const modeSet = useRef(false);
+  const title = options.title;
 
   const goSilent = useCallback(() => {
     setSilent(true);
@@ -55,15 +76,32 @@ export function useTrack(source: AudioSource, fallbackDurationSec: number): Trac
     if (silent) return;
     if (!modeSet.current) {
       modeSet.current = true;
-      // iOS: play even with the ringer switch on silent (a session is deliberate listening).
-      setAudioModeAsync({ playsInSilentMode: true }).catch(() => undefined);
+      // iOS: play even with the ringer switch on silent (a session is deliberate listening), and
+      // keep playing with the screen locked or the app in the background.
+      setAudioModeAsync({
+        playsInSilentMode: true,
+        shouldPlayInBackground: true,
+        interruptionMode: 'doNotMix',
+      }).catch(() => undefined);
+      if (Platform.OS !== 'web') {
+        try {
+          // Lock-screen and notification controls (play/pause) for the session.
+          player.setActiveForLockScreen(true, { title });
+        } catch {
+          // Not available on this platform.
+        }
+      }
     }
     try {
       player.play();
     } catch {
       goSilent();
     }
-  }, [player, silent, goSilent]);
+  }, [player, silent, goSilent, title]);
+
+  const seekTo = useCallback((to: number) => {
+    setSeekRequest((r) => ({ to: Math.max(0, to), n: (r?.n ?? 0) + 1 }));
+  }, []);
 
   const pause = useCallback(() => {
     setWanted(false);
@@ -74,9 +112,33 @@ export function useTrack(source: AudioSource, fallbackDurationSec: number): Trac
     }
   }, [player]);
 
+  useEffect(
+    () => () => {
+      if (Platform.OS === 'web') return;
+      try {
+        player.setActiveForLockScreen(false);
+      } catch {
+        // Already released.
+      }
+    },
+    [player],
+  );
+
   return useMemo(
-    () => ({ player, wanted, silent, fallbackDurationSec, play, pause, goSilent }),
-    [player, wanted, silent, fallbackDurationSec, play, pause, goSilent],
+    () => ({
+      player,
+      wanted,
+      silent,
+      fallbackDurationSec,
+      play,
+      pause,
+      goSilent,
+      seekTo,
+      positionRef,
+      durationRef,
+      seekRequest,
+    }),
+    [player, wanted, silent, fallbackDurationSec, play, pause, goSilent, seekTo, seekRequest],
   );
 }
 
@@ -99,7 +161,7 @@ export interface TrackStatusOptions {
 export function useTrackStatus(track: Track, options: TrackStatusOptions = {}): TrackStatus {
   const { stallMs = 5000 } = options;
   const now = options.now ?? Date.now;
-  const { player, wanted, silent, fallbackDurationSec, goSilent } = track;
+  const { player, wanted, silent, fallbackDurationSec, goSilent, seekRequest } = track;
   const status = useAudioPlayerStatus(player);
   const [timerPosition, setTimerPosition] = useState(0);
   const timerFinished = silent && timerPosition >= fallbackDurationSec;
@@ -118,7 +180,8 @@ export function useTrackStatus(track: Track, options: TrackStatusOptions = {}): 
     let lastMove = { at: start, position: latest.current.currentTime };
     const timer = setInterval(() => {
       const s = latest.current;
-      if (s.isLoaded && s.playing && s.currentTime > lastMove.position) {
+      // Any movement counts (a jump back too): only a clock that stands still is a stall.
+      if (s.isLoaded && s.playing && s.currentTime !== lastMove.position) {
         lastMove = { at: now(), position: s.currentTime };
         return;
       }
@@ -155,6 +218,24 @@ export function useTrackStatus(track: Track, options: TrackStatusOptions = {}): 
         !status.playing &&
         wanted);
 
+  // A requested jump: the silent timer moves at once; the audio once it has loaded.
+  const appliedSeek = useRef(0);
+  useEffect(() => {
+    if (!seekRequest || appliedSeek.current === seekRequest.n) return;
+    if (silent) {
+      appliedSeek.current = seekRequest.n;
+      const to = Math.min(fallbackDurationSec, seekRequest.to);
+      const timer = setTimeout(() => setTimerPosition(to), 0);
+      return () => clearTimeout(timer);
+    }
+    if (!status.isLoaded) return;
+    appliedSeek.current = seekRequest.n;
+    const length = Number.isFinite(status.duration) && status.duration > 0 ? status.duration : null;
+    player
+      .seekTo(length ? Math.min(length, seekRequest.to) : seekRequest.to)
+      .catch(() => undefined);
+  }, [seekRequest, silent, status.isLoaded, status.duration, fallbackDurationSec, player]);
+
   // The end is reported once, as an event (the caller usually moves on from it).
   useEffect(() => {
     if (!finished || finishedBefore.current) return;
@@ -162,8 +243,18 @@ export function useTrackStatus(track: Track, options: TrackStatusOptions = {}): 
     onFinish.current?.();
   }, [finished]);
 
+  const position = silent
+    ? timerPosition
+    : Number.isFinite(status.currentTime)
+      ? status.currentTime
+      : 0;
+  const { positionRef, durationRef } = track;
+  useEffect(() => {
+    positionRef.current = position;
+    durationRef.current = duration;
+  }, [position, duration, positionRef, durationRef]);
   return {
-    position: silent ? timerPosition : Number.isFinite(status.currentTime) ? status.currentTime : 0,
+    position,
     duration,
     playing: silent ? wanted && !timerFinished : status.playing,
     finished,

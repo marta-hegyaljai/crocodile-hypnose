@@ -66,6 +66,19 @@ export interface DocumentRecord {
   storedAt: number;
 }
 
+/** One event of an append-only per-user stream (session completions, mood check-ins). */
+export interface EventRecord {
+  userId: string;
+  stream: string;
+  /** Client-made id: the same event sent twice is stored once. */
+  id: string;
+  /** The event body, already validated for its stream. */
+  data: Record<string, unknown>;
+  /** When it happened (client time, clamped to the server's), epoch ms. */
+  at: number;
+  storedAt: number;
+}
+
 export class EmailTakenError extends Error {
   constructor() {
     super('email taken');
@@ -131,6 +144,21 @@ export interface AccountRepository {
     record: DocumentRecord,
     resolve?: (stored: DocumentRecord | null) => DocumentRecord | null,
   ): Promise<DocumentRecord>;
+
+  /**
+   * Appends events to a stream, atomically. An id already stored is kept as it is (a retry);
+   * for a new one, `decide` sees the stream as stored so far (including the events added before
+   * it in this call) and returns the record to store, or throws to refuse the whole call. Returns
+   * what is stored for each incoming id, in order.
+   */
+  appendEvents(
+    userId: string,
+    stream: string,
+    events: EventRecord[],
+    decide: (event: EventRecord, stored: EventRecord[]) => EventRecord,
+  ): Promise<EventRecord[]>;
+  /** The stream's latest `limit` events, oldest first. */
+  listEvents(userId: string, stream: string, limit: number): Promise<EventRecord[]>;
 
   close(): Promise<void>;
 }

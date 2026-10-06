@@ -1,3 +1,5 @@
+import { confirmedLog } from '@/services/events/eventLog';
+import type { SessionCompletedEvent } from '@/services/events/types';
 import { defaultProgress } from '@/services/progress/types';
 import { markDone } from '@/services/progress/mergeProgress';
 
@@ -20,5 +22,22 @@ describe('home stats (placeholders until step 7)', () => {
     p = markDone(p, 'c', wed - 3600_000);
     p = markDone(p, 'd', lastSun);
     expect(daysActiveThisWeek(p, wed)).toBe(2);
+  });
+});
+
+describe('placeholderPoints with sessions', () => {
+  it('adds the session points to the onboarding reward', () => {
+    const log = confirmedLog<SessionCompletedEvent>([
+      {
+        id: 'evt-00000001',
+        type: 'sessionCompleted',
+        stopId: 'intro-2',
+        stopType: 'audio',
+        at: 1,
+        firstTime: true,
+      },
+    ]);
+    expect(placeholderPoints({ rewardGranted: true }, log)).toBe(80);
+    expect(placeholderPoints({ rewardGranted: false })).toBe(0);
   });
 });
