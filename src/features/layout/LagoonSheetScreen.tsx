@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { Platform, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
+import type { SharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Lagoon, fitPeekCroc, type CrocExpression, type CrocStage } from '@/illustration';
-import { radius, space, useTheme } from '@/theme';
+import { AtmosphereProvider, radius, space, useTheme, type Atmosphere } from '@/theme';
 import { Reveal, Screen } from '@/ui';
 
 const Arrive = Platform.OS === 'web' ? Reveal : View;
@@ -25,6 +26,16 @@ export interface LagoonSheetScreenProps {
   crocName?: string;
   /** Petals and sparkles burst from the croc while true. */
   celebrating?: boolean;
+  /** A bigger burst (the reward moment). */
+  celebrationScale?: number;
+  /** A splash where the croc lands on the water while true. */
+  splash?: boolean;
+  /** Draw the croc (off while it is swimming in another scene underneath, e.g. the dive). */
+  showCroc?: boolean;
+  /** The croc's vertical offset on the UI thread (negative lifts it: a hop). */
+  crocOffsetY?: SharedValue<number>;
+  /** The Night River version of the same screen (a long trance begins at dusk). */
+  atmosphere?: Atmosphere;
   testID?: string;
 }
 
@@ -33,15 +44,31 @@ export interface LagoonSheetScreenProps {
  * sized and placed in the free band between them, so it never runs into the text; in landscape the
  * content takes the left column and the croc the right. Content scrolls when it does not fit.
  */
-export function LagoonSheetScreen({
+export function LagoonSheetScreen({ atmosphere, ...rest }: LagoonSheetScreenProps) {
+  // The switch wraps the whole screen, so the sheet's own colours follow it too.
+  if (atmosphere) {
+    return (
+      <AtmosphereProvider atmosphere={atmosphere}>
+        <LagoonSheetBody {...rest} />
+      </AtmosphereProvider>
+    );
+  }
+  return <LagoonSheetBody {...rest} />;
+}
+
+function LagoonSheetBody({
   header,
   sheet,
   expression,
   stage = 'juvenile',
   crocName,
   celebrating = false,
+  celebrationScale = 1,
+  splash = false,
+  showCroc = true,
+  crocOffsetY,
   testID,
-}: LagoonSheetScreenProps) {
+}: Omit<LagoonSheetScreenProps, 'atmosphere'>) {
   const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const theme = useTheme();
@@ -91,6 +118,10 @@ export function LagoonSheetScreen({
           leafSize={leafSize}
           farReeds={!landscape}
           celebrate={celebrating}
+          celebrationScale={celebrationScale}
+          splash={splash}
+          showCroc={showCroc}
+          crocOffsetY={crocOffsetY}
           crocName={crocName}
         />
       }

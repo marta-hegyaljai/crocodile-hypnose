@@ -9,7 +9,8 @@
 6. **Mood check** screen: five water states (wave visual from calm to rough) with placeholder labels "Mood 1"–"Mood 5"; before and after; the after screen shows the change with a small water animation. Stored locally and synced (`POST /me/mood`) only with consent; skippable.
 7. **Reward moment:** the loudest moment in the app, always after the session: splash, points counting up (amount from a pure function; ledger comes in step 7, so emit an idempotent "session completed" event now and keep points display wired to a store), the croc celebrating, the next stop unlocking on the map with an animation when you return.
 8. **Safety:** respect `cautionMode` (hide/flag non-caution-safe stops); "pause on headphones unplugged"; a quiet note on long trances not to listen while driving (placeholder copy).
-9. Replace the onboarding first-session player with this one.
+9. The onboarding first-session player (`src/app/onboarding/first-session.tsx`) was just polished by the designer (S03): the whole screen dives into Night River, the croc's eyes breathe inside the ring, controls sit in a night dock. Build the session player on that composition (extract it into shared components) instead of designing a new one, then make onboarding use the shared player.
+10. S04 left a placeholder at `/session/[stopId]` that marks a stop started and has a dev "Complete" helper; replace it with the real flow and keep the progress API from S04 (`updateProgress`, done never regresses).
 
 ## Acceptance criteria
 - `npm run check`, server tests, e2e pass; e2e: complete an audio stop end to end (with a test hook to fast-forward time), mood before/after, reward, next stop unlocked; interrupted session resumes.

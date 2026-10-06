@@ -75,6 +75,8 @@ describe('a new device where progress arrives before the settings', () => {
           ? Promise.reject(new AuthError('unreachable'))
           : fake.get(kind, token),
       put: (kind, doc, token) => fake.put(kind, doc, token),
+      listEvents: (stream, token) => fake.listEvents(stream, token),
+      appendEvents: (stream, items, token) => fake.appendEvents(stream, items, token),
     } as ProfileClient;
     const store = createProfileStore({
       client,

@@ -9,7 +9,16 @@ import {
   resolveDocument,
   type DocumentKind,
 } from '../documents.ts';
-import { errors } from '../errors.ts';
+import { ApiError, errors } from '../errors.ts';
+import {
+  bodySchemaForStream,
+  decideEvent,
+  EVENT_STREAMS,
+  EVENTS_READ_LIMIT,
+  STREAM_FIELD,
+  toRecords,
+  wireEvent,
+} from '../events.ts';
 import type { DocumentRecord } from '../storage/repository.ts';
 
 function bearer(req: FastifyRequest): string {
@@ -77,6 +86,41 @@ export async function meRoutes(app: FastifyInstance, { service, now = Date.now }
           return resolved ? { ...incoming, data: resolved } : null;
         });
         return { [kind]: wire(stored) };
+      },
+    );
+  }
+
+  /** Mood data may be stored only while the user agrees to it (settings, else onboarding). */
+  async function moodConsent(userId: string): Promise<boolean> {
+    const settings = await repo.getDocument(userId, 'settings');
+    if (settings) return settings.data.moodConsent === true;
+    const onboarding = await repo.getDocument(userId, 'onboarding');
+    return onboarding?.data.moodConsent === true;
+  }
+
+  // Append-only event streams: GET returns the latest events (oldest first), POST appends a batch
+  // (an id already stored is kept as it is) and answers with what is stored for each sent id.
+  for (const stream of EVENT_STREAMS) {
+    const field = STREAM_FIELD[stream];
+    app.get(`/me/${stream}`, async (req) => {
+      const { user } = await service.authenticate(bearer(req));
+      const list = await repo.listEvents(user.id, stream, EVENTS_READ_LIMIT);
+      return { [field]: list.map(wireEvent) };
+    });
+
+    app.post<{ Body: Record<string, Record<string, unknown>[]> }>(
+      `/me/${stream}`,
+      { schema: { body: bodySchemaForStream(stream) } },
+      async (req) => {
+        const { user } = await service.authenticate(bearer(req));
+        if (stream === 'mood' && !(await moodConsent(user.id))) {
+          throw new ApiError(403, 'consent_required', 'Mood check-ins need the user’s consent.');
+        }
+        const records = toRecords(user.id, stream, req.body[field] ?? [], now());
+        const stored = await repo.appendEvents(user.id, stream, records, (event, current) =>
+          decideEvent(stream, event, current),
+        );
+        return { [field]: stored.map(wireEvent) };
       },
     );
   }

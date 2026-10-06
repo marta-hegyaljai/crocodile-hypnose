@@ -79,22 +79,35 @@ export function BreathingVisual({ size, half = 4, paused = false, testID }: Brea
           ]}
         />
       </View>
-      <Text
-        variant="subheading"
-        tone="secondary"
-        align="center"
-        accessibilityLiveRegion="polite"
-        testID={testID ? `${testID}-cue` : undefined}
-      >
-        {phase === 'in'
-          ? t('onboarding.firstSession.breatheIn')
-          : t('onboarding.firstSession.breatheOut')}
-      </Text>
+      {/* On a dark pill, above the halo: the cue keeps AA contrast in every phase of the breath. */}
+      <View style={styles.cue}>
+        <Text
+          variant="subheading"
+          color={CUE_TEXT}
+          align="center"
+          accessibilityLiveRegion="polite"
+          testID={testID ? `${testID}-cue` : undefined}
+        >
+          {phase === 'in'
+            ? t('onboarding.firstSession.breatheIn')
+            : t('onboarding.firstSession.breatheOut')}
+        </Text>
+      </View>
     </View>
   );
 }
 
+const CUE_TEXT = palette.mistDeep;
+
 const styles = StyleSheet.create({
+  cue: {
+    paddingHorizontal: 18,
+    paddingVertical: 5,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: withAlpha(palette.shallows, 0.35),
+    backgroundColor: withAlpha(palette.nightRiver, 0.86),
+  },
   root: { alignItems: 'center', justifyContent: 'center', gap: 8 },
   stage: { alignItems: 'center', justifyContent: 'center' },
   circle: { position: 'absolute' },

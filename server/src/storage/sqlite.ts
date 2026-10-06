@@ -8,6 +8,7 @@ import {
   type AccountRepository,
   type ClientSignIn,
   type DocumentRecord,
+  type EventRecord,
   type PasswordResetRecord,
   type RefreshTokenRecord,
   type SessionRecord,
@@ -68,6 +69,17 @@ function toDocument(row: Row): DocumentRecord {
     version: num(row.version),
     data: JSON.parse(str(row.data)) as Record<string, unknown>,
     updatedAt: num(row.updated_at),
+    storedAt: num(row.stored_at),
+  };
+}
+
+function toEvent(row: Row): EventRecord {
+  return {
+    userId: str(row.user_id),
+    stream: str(row.stream),
+    id: str(row.id),
+    data: JSON.parse(str(row.data)) as Record<string, unknown>,
+    at: num(row.at),
     storedAt: num(row.stored_at),
   };
 }
@@ -357,6 +369,46 @@ export class SqliteAccountRepository implements AccountRepository {
         );
       return next;
     });
+  }
+
+  async appendEvents(
+    userId: string,
+    stream: string,
+    events: EventRecord[],
+    decide: (event: EventRecord, stored: EventRecord[]) => EventRecord,
+  ): Promise<EventRecord[]> {
+    return this.transaction(() => {
+      const stored = (
+        this.db
+          .prepare('SELECT * FROM user_events WHERE user_id = ? AND stream = ? ORDER BY at, id')
+          .all(userId, stream) as Row[]
+      ).map(toEvent);
+      const byId = new Map(stored.map((e) => [e.id, e]));
+      const insert = this.db.prepare(
+        `INSERT INTO user_events (user_id, stream, id, data, at, stored_at)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+      );
+      return events.map((event) => {
+        const existing = byId.get(event.id);
+        if (existing) return existing;
+        const next = decide(event, stored);
+        insert.run(userId, stream, next.id, JSON.stringify(next.data), next.at, next.storedAt);
+        stored.push(next);
+        byId.set(next.id, next);
+        return next;
+      });
+    });
+  }
+
+  async listEvents(userId: string, stream: string, limit: number): Promise<EventRecord[]> {
+    const rows = this.db
+      .prepare(
+        `SELECT * FROM (
+           SELECT * FROM user_events WHERE user_id = ? AND stream = ? ORDER BY at DESC, id DESC LIMIT ?
+         ) ORDER BY at, id`,
+      )
+      .all(userId, stream, limit) as Row[];
+    return rows.map(toEvent);
   }
 
   async close(): Promise<void> {

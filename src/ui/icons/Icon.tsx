@@ -21,7 +21,10 @@ export type IconName =
   | 'eyeOff'
   | 'info'
   | 'alert'
-  | 'mail';
+  | 'mail'
+  | 'rewind'
+  | 'waves'
+  | 'captions';
 
 export interface IconProps {
   name: IconName;
@@ -182,6 +185,28 @@ export function Icon({ name, size = 24, color, strokeWidth = 2.2, testID }: Icon
             {...stroke}
           />
           <Path d="M3.8 7 L12 13 L20.2 7" {...stroke} />
+        </>
+      )}
+      {name === 'rewind' && (
+        <>
+          {/* A turn back: an open circle with its arrow head at the top left. */}
+          <Path d="M5.5 9.5 A7.5 7.5 0 1 1 5 14.5" {...stroke} />
+          <Path d="M4.5 4.8 V9.8 H9.5" {...stroke} />
+        </>
+      )}
+      {name === 'waves' && (
+        <>
+          <Path d="M3 9 Q 6 6.5, 9 9 T 15 9 T 21 9" {...stroke} />
+          <Path d="M3 14.5 Q 6 12, 9 14.5 T 15 14.5 T 21 14.5" {...stroke} opacity={0.7} />
+        </>
+      )}
+      {name === 'captions' && (
+        <>
+          <Path
+            d="M5 5.5 H19 A2 2 0 0 1 21 7.5 V16.5 A2 2 0 0 1 19 18.5 H5 A2 2 0 0 1 3 16.5 V7.5 A2 2 0 0 1 5 5.5 Z"
+            {...stroke}
+          />
+          <Path d="M6.5 11 H11 M13 11 H17.5 M6.5 14.5 H14" {...stroke} strokeWidth={strokeWidth * 0.8} />
         </>
       )}
     </Svg>

@@ -17,6 +17,7 @@ import { JungleLeaves } from './JungleLeaves';
 import { LilyPad } from './LilyPad';
 import { Reeds } from './Reeds';
 import { SkyGlow } from './SkyGlow';
+import { WaterSplash } from './WaterSplash';
 import { WaterSurface } from './WaterSurface';
 
 export interface LagoonProps {
@@ -38,6 +39,10 @@ export interface LagoonProps {
   farReeds?: boolean;
   /** Petals, sparkles and bubbles burst from the croc while true (a celebration). */
   celebrate?: boolean;
+  /** How far the celebration reaches (1 is the everyday burst; the reward uses more). */
+  celebrationScale?: number;
+  /** A splash on the water where the croc lands while true (plays once each time it turns on). */
+  splash?: boolean;
   /** Draw the croc at all (off for a scene whose hero sits elsewhere, e.g. an egg on the bank). */
   showCroc?: boolean;
   /**
@@ -70,6 +75,8 @@ export function Lagoon({
   leafSize,
   farReeds = true,
   celebrate = false,
+  celebrationScale = 1,
+  splash = false,
   showCroc = true,
   crocOffsetY,
   crocName,
@@ -293,9 +300,18 @@ export function Lagoon({
           active={celebrate}
           x={Math.round(width * crocX)}
           y={Math.round(crocTop + crocHeight * ratio.r * 0.45)}
-          radius={Math.round(Math.min(Math.max(cw * 0.55, 110), 200))}
+          radius={Math.round(Math.min(Math.max(cw * 0.55, 110), 200) * celebrationScale)}
           animated={animated}
           testID={testID ? `${testID}-celebration` : undefined}
+        />
+        {/* The splash where the croc lands on the water. */}
+        <WaterSplash
+          active={splash}
+          x={Math.round(width * crocX)}
+          y={waterY + 6}
+          width={Math.round(Math.min(cw * 0.9, 320))}
+          animated={animated}
+          testID={testID ? `${testID}-splash` : undefined}
         />
       </View>
     </View>

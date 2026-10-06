@@ -9,6 +9,9 @@
  *                      that swells at a breathing pace over a soft river of filtered noise.
  * - hatch.mp3          a short crack-and-chime for the hatching moment.
  * - tap.mp3            a soft tick for the egg taps.
+ * - session.mp3        ~90 s calm track standing in for every audio session and long trance.
+ * - soundscape-river.mp3, soundscape-rain.mp3, soundscape-night.mp3
+ *                      ~20 s loops for the player's background sound choice.
  *
  * The WAVs are synthesised here and encoded as low-bitrate mono MP3 with ffmpeg (the one on PATH,
  * or Playwright's at /opt/pw-browsers/ffmpeg-*). With --wav-only, or without ffmpeg, the WAVs are
@@ -97,6 +100,70 @@ function calmTrack(seconds = 75) {
   return out;
 }
 
+/** A loop of `seconds` whose ends are cross-faded, so it repeats without a click. */
+function seamless(samples, fadeSec = 1) {
+  const fade = Math.round(fadeSec * RATE);
+  const n = samples.length - fade;
+  const out = new Float32Array(n);
+  for (let i = 0; i < n; i++) out[i] = samples[i];
+  for (let i = 0; i < fade; i++) {
+    const w = i / fade;
+    out[i] = samples[i] * w + samples[n + i] * (1 - w);
+  }
+  return out;
+}
+
+function riverLoop(seconds = 20) {
+  const n = Math.round((seconds + 1) * RATE);
+  const out = new Float32Array(n);
+  const random = rng(21);
+  let brown = 0;
+  let lp = 0;
+  for (let i = 0; i < n; i++) {
+    const t = i / RATE;
+    brown = (brown + (random() * 2 - 1) * 0.02) * 0.995;
+    lp += (brown - lp) * 0.12;
+    out[i] = lp * 3 * (0.75 + 0.25 * Math.sin(2 * Math.PI * (1 / 7) * t));
+  }
+  return seamless(out);
+}
+
+function rainLoop(seconds = 20) {
+  const n = Math.round((seconds + 1) * RATE);
+  const out = new Float32Array(n);
+  const random = rng(33);
+  let lp = 0;
+  let drop = 0;
+  for (let i = 0; i < n; i++) {
+    const white = random() * 2 - 1;
+    lp += (white - lp) * 0.45;
+    // Now and then a soft drop.
+    if (random() < 0.0009) drop = 0.25 + random() * 0.2;
+    drop *= 0.996;
+    out[i] = lp * 0.14 + drop * (random() * 2 - 1) * 0.5;
+  }
+  return seamless(out);
+}
+
+function nightLoop(seconds = 20) {
+  const n = Math.round((seconds + 1) * RATE);
+  const out = new Float32Array(n);
+  const random = rng(45);
+  let brown = 0;
+  let lp = 0;
+  for (let i = 0; i < n; i++) {
+    const t = i / RATE;
+    brown = (brown + (random() * 2 - 1) * 0.02) * 0.995;
+    lp += (brown - lp) * 0.05;
+    // A far cricket: short chirps in pairs every few seconds.
+    const cycle = t % 3.2;
+    const chirp =
+      (cycle < 0.05 || (cycle > 0.12 && cycle < 0.17)) ? Math.sin(2 * Math.PI * 4400 * t) * 0.025 : 0;
+    out[i] = lp * 1.6 + chirp;
+  }
+  return seamless(out);
+}
+
 function hatchSound() {
   const seconds = 0.9;
   const n = Math.round(seconds * RATE);
@@ -164,6 +231,10 @@ const tracks = [
   ['first-session', calmTrack(), '32k'],
   ['hatch', hatchSound(), '48k'],
   ['tap', tapSound(), '48k'],
+  ['session', calmTrack(90), '32k'],
+  ['soundscape-river', riverLoop(), '24k'],
+  ['soundscape-rain', rainLoop(), '24k'],
+  ['soundscape-night', nightLoop(), '24k'],
 ];
 for (const [name, samples, bitrate] of tracks) {
   const wavPath = join(OUT_DIR, `${name}.wav`);

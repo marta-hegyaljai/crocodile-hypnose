@@ -18,7 +18,7 @@ export interface MoodPickerProps {
 const MOODS: MoodValue[] = [1, 2, 3, 4, 5];
 
 /** The water for a mood: still at 1, choppy at 5. */
-function wavePath(mood: MoodValue): string {
+export function wavePath(mood: MoodValue): string {
   const amp = (mood - 1) * 2.4;
   const n = 4 + mood;
   const step = 56 / n;

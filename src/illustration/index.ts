@@ -10,6 +10,7 @@ export { LilyPad, type LilyPadProps } from './scene/LilyPad';
 export { JungleLeaves, type JungleLeavesProps, type Corner } from './scene/JungleLeaves';
 export { Fireflies, type FirefliesProps } from './scene/Fireflies';
 export { CelebrationBurst, type CelebrationBurstProps } from './scene/CelebrationBurst';
+export { WaterSplash, type WaterSplashProps } from './scene/WaterSplash';
 export { FarJungle, type FarJungleProps } from './scene/FarJungle';
 export { SkyGlow, type SkyGlowProps } from './scene/SkyGlow';
 export { RiverPath, smoothPath, type RiverPathProps } from './scene/RiverPath';

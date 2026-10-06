@@ -35,6 +35,7 @@ export const en = {
   points: {
     name: ph('Points'), // PLACEHOLDER
     amount: ph('{n} Points'), // PLACEHOLDER
+    gain: ph('+{n} Points'), // PLACEHOLDER
   },
   goal: {
     weekly: 'Weekly goal',
@@ -287,11 +288,60 @@ export const en = {
     },
   },
   session: {
-    placeholder: ph('[Session player: coming in step 5]'), // PLACEHOLDER
     back: 'Back to the river',
     completeDev: 'Complete (dev)',
     notFound: 'This session is not available.',
     meta: '{type} · {duration}',
+    intro: ph('[Session intro]'), // PLACEHOLDER
+    longTranceIntro: ph('[Long trance intro]'), // PLACEHOLDER
+    drivingNote: ph('[Do not listen while driving]'), // PLACEHOLDER
+    cautionNote: ph('[Not suggested in caution mode]'), // PLACEHOLDER
+    start: 'Start',
+    resume: 'Resume at {time}',
+    restart: 'Start over',
+    playAgain: 'Play again',
+    moodTitle: 'Mood check',
+    moodAfterTitle: 'Mood check',
+    moodSkip: 'Skip',
+    moodContinue: 'Continue',
+    moodChange: 'Before: {from} · After: {to}',
+    endedTitle: 'Session ended',
+    endedBody: ph('[Session ended early text]'), // PLACEHOLDER
+    notFinished: ph('[Listen to most of the session to finish it]'), // PLACEHOLDER
+    rewardTitle: ph('[Reward title]'), // PLACEHOLDER
+    rewardFirstTime: ph('[First time bonus] +{n}'), // PLACEHOLDER
+    rewardContinue: 'Back to the river',
+    gameSoon: ph('[Games: coming in step 6]'), // PLACEHOLDER
+  },
+  player: {
+    a11y: 'Session player',
+    back15: 'Back 15 seconds',
+    sound: 'Background sound',
+    soundscapes: {
+      none: 'Off',
+      river: ph('River'), // PLACEHOLDER
+      rain: ph('Rain'), // PLACEHOLDER
+      night: ph('Night'), // PLACEHOLDER
+    },
+    remaining: '{time} left',
+    captions: 'Captions',
+    captionsOn: 'Hide captions',
+    captionsOff: 'Show captions',
+    end: 'End session',
+    endTitle: 'End the session?',
+    endBody: ph('[End session early text]'), // PLACEHOLDER
+    endConfirm: 'End session',
+    endCancel: 'Keep going',
+    audioUnavailable: 'The audio could not be loaded. The session continues in silence.',
+    videoUnavailable: 'The video could not be loaded. The lesson continues without it.',
+    revealHint: 'Tap anywhere to show the controls',
+    visual: {
+      fixation: ph('[Rest your eyes on the glow]'), // PLACEHOLDER
+      breathing: ph('[Breathe with the ring]'), // PLACEHOLDER
+      imagery: ph('[Imagery {n}]'), // PLACEHOLDER
+    },
+    a11yVisual: 'Visual exercise',
+    a11yVideo: 'Video lesson',
   },
   tabsPlaceholder: {
     croc: ph('[Croc habitat: coming in step 7]'), // PLACEHOLDER
@@ -391,19 +441,11 @@ export const en = {
       skipMood: 'Skip',
       breatheIn: ph('Breathe in'), // PLACEHOLDER
       breatheOut: ph('Breathe out'), // PLACEHOLDER
-      remaining: '{time} left',
       completeTitle: 'Session complete',
       completeBody: ph('[First session complete text]'), // PLACEHOLDER
-      end: 'End session',
-      endTitle: 'End the session?',
-      endBody: ph('[End session early text]'), // PLACEHOLDER
-      endConfirm: 'End session',
-      endCancel: 'Keep going',
       endedTitle: 'Session ended',
       endedBody: ph('[Session ended early text]'), // PLACEHOLDER
-      audioUnavailable: 'The audio could not be loaded. The session continues in silence.',
       a11yBreathing: 'Breathing guide',
-      a11yPlayer: 'First session player',
     },
     reminder: {
       title: 'Daily reminder',

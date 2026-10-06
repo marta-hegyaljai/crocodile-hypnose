@@ -16,6 +16,7 @@ export type ErrorCode =
   | 'invalid_reset_token'
   | 'rate_limited'
   | 'not_found'
+  | 'consent_required'
   | 'internal';
 
 export interface ErrorBody {

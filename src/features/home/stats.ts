@@ -1,16 +1,23 @@
 import { ONBOARDING_POINTS } from '@/features/onboarding/flow';
+import { eventsOf } from '@/services/events/eventLog';
+import type { EventLogDoc, SessionCompletedEvent } from '@/services/events/types';
+import { totalSessionPoints } from '@/services/points/points';
 import type { OnboardingDoc } from '@/services/profile/types';
 import type { ProgressDoc } from '@/services/progress/types';
 
 /**
- * Placeholder numbers for the home header until the points ledger and the weekly goal arrive in
- * step 7: points are the onboarding reward, the weekly goal counts the days this week with a
- * finished stop against a fixed target.
+ * Numbers for the home header until the points ledger and the weekly goal arrive in step 7:
+ * points are the onboarding reward plus the session points (from the "session completed" events),
+ * the weekly goal counts the days this week with a finished stop against a fixed target.
  */
 export const WEEKLY_GOAL_DAYS = 5;
 
-export function placeholderPoints(onboarding: Pick<OnboardingDoc, 'rewardGranted'>): number {
-  return onboarding.rewardGranted ? ONBOARDING_POINTS : 0;
+export function placeholderPoints(
+  onboarding: Pick<OnboardingDoc, 'rewardGranted'>,
+  sessions?: EventLogDoc<SessionCompletedEvent>,
+): number {
+  const fromSessions = sessions ? totalSessionPoints(eventsOf(sessions)) : 0;
+  return (onboarding.rewardGranted ? ONBOARDING_POINTS : 0) + fromSessions;
 }
 
 /** Start of the local week (Monday 00:00) containing `now`. */

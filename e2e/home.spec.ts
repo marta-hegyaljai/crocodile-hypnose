@@ -91,13 +91,19 @@ async function onHome(page: Page, request: APIRequestContext, email: string) {
   return headers;
 }
 
+/** Finishes the open session with the dev helper and comes back from the reward. */
+async function devComplete(page: Page) {
+  await page.getByTestId('session-complete-dev').click();
+  await page.getByTestId('session-reward-continue').click();
+  await expect(page.getByTestId('home-screen')).toBeVisible();
+}
+
 /** Plays a stop from its node: sheet, Start, then the dev "complete" on the session screen. */
 async function completeFromMap(page: Page, stopId: string) {
   await page.getByTestId(`stop-${stopId}`).click();
   await page.getByTestId('stop-sheet-start').click();
   await expect(page.getByTestId('session-screen')).toBeVisible();
-  await page.getByTestId('session-complete-dev').click();
-  await expect(page.getByTestId('home-screen')).toBeVisible();
+  await devComplete(page);
 }
 
 const label = (page: Page, stopId: string) =>
@@ -132,8 +138,7 @@ test.describe('home and river map', () => {
     const crocBefore = await page.getByTestId('map-croc').boundingBox();
     await page.getByTestId('today-play').click();
     await expect(page.getByTestId('session-title')).toHaveText('Sleep · Stop 1');
-    await page.getByTestId('session-complete-dev').click();
-    await expect(page.getByTestId('home-screen')).toBeVisible();
+    await devComplete(page);
     await expect(page.getByTestId('today-title')).toHaveText('Sleep · Stop 2');
     await expect.poll(() => label(page, 'sleep-1')).toContain('Done');
     await expect.poll(() => label(page, 'sleep-2')).toContain('You are here');
