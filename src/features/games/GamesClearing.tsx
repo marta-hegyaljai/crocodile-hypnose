@@ -19,9 +19,10 @@ import {
   SkyGlow,
 } from '@/illustration';
 import { palette, radius, space, useTheme } from '@/theme';
-import { Card, Chip, Icon, Screen, Text, type IconName } from '@/ui';
+import { Card, Chip, Icon, Screen, Text } from '@/ui';
 
 import { GAMES, type GameDef, type GameId } from './catalog';
+import { GAME_ICONS, GAME_TINTS } from './gameArt';
 import type { GameRecords } from './records';
 import { resultLabel } from './resultLabel';
 
@@ -30,17 +31,6 @@ export interface GamesClearingProps {
   crocName: string;
   onOpen: (gameId: GameId) => void;
 }
-
-const ICONS: Record<GameId, IconName> = {
-  stillness: 'drop',
-  firefly: 'sparkle',
-  breathing: 'leaf',
-};
-const TINTS: Record<GameId, { bg: string; fg: string }> = {
-  stillness: { bg: palette.shallows, fg: palette.tealDeep },
-  firefly: { bg: palette.tealNight, fg: palette.amberGlow },
-  breathing: { bg: palette.leafLight, fg: palette.crocGreenDark },
-};
 
 /**
  * The games clearing: a sunny gap in the jungle with a pond, the croc sitting on the grass, and
@@ -51,11 +41,13 @@ export function GamesClearing({ records, crocName, onOpen }: GamesClearingProps)
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
   const short = height < 700;
-  const sceneH = Math.round(Math.min(short ? height * 0.36 : height * 0.42, 360));
+  // Tablets get a taller clearing and a bigger croc so the scene is not a thin band over empty space.
+  const wide = width >= 700;
+  const sceneH = Math.round(Math.min(short ? height * 0.36 : height * 0.42, wide ? 460 : 360));
   const grassY = Math.round(sceneH * 0.68);
   // The croc sits on the grass at full size, its feet (GROUND_Y of the figure) on the grass line.
   // The full-pose drawing's viewBox starts at FIGURE_TOP (see geometry.ts).
-  const crocW = Math.min(Math.round(width * 0.55), 280);
+  const crocW = Math.min(Math.round(width * 0.72), wide ? 520 : 320);
   const crocH = (crocW * (FIGURE_H - FIGURE_TOP)) / FIGURE_W;
   const crocTop = Math.round(
     grassY - (crocH * (GROUND_Y - FIGURE_TOP)) / (FIGURE_H - FIGURE_TOP) + 4,
@@ -110,14 +102,14 @@ export function GamesClearing({ records, crocName, onOpen }: GamesClearingProps)
         <Fireflies count={6} intensity={0.6} color={palette.mistLight} scale={0.8} />
         <Reeds
           count={4}
-          width={90}
-          height={100}
-          style={{ position: 'absolute', right: 8, top: grassY - 70 }}
+          width={wide ? 120 : 90}
+          height={wide ? 134 : 100}
+          style={{ position: 'absolute', right: 8, top: grassY - (wide ? 94 : 70) }}
           tone="light"
           flip
         />
         <LilyPad
-          size={44}
+          size={wide ? 60 : 44}
           flower
           style={{ position: 'absolute', left: width * 0.72, top: sceneH * 0.84 }}
           rotation={-20}
@@ -152,9 +144,18 @@ export function GamesClearing({ records, crocName, onOpen }: GamesClearingProps)
           {t('games.clearing.body')}
         </Text>
       </View>
-      <View style={[styles.list, { paddingBottom: insets.bottom + space.xxl }]}>
+      {/* Tablets: the three cards side by side instead of a short column over empty ground. */}
+      <View
+        style={[
+          styles.list,
+          wide && styles.listRow,
+          { paddingBottom: insets.bottom + space.xxl, maxWidth: wide ? 820 : 560 },
+        ]}
+      >
         {GAMES.map((game) => (
-          <GameCard key={game.id} game={game} record={records[game.id]} onOpen={onOpen} />
+          <View key={game.id} style={wide ? styles.listCell : undefined}>
+            <GameCard game={game} record={records[game.id]} onOpen={onOpen} />
+          </View>
         ))}
       </View>
     </Screen>
@@ -177,7 +178,7 @@ function GameCard({
         ? t('games.clearing.playsOne')
         : t('games.clearing.plays', { n: record.plays });
   const title = t(game.titleKey);
-  const tint = TINTS[game.id];
+  const tint = GAME_TINTS[game.id];
   return (
     <Card
       onPress={() => onOpen(game.id)}
@@ -191,7 +192,7 @@ function GameCard({
     >
       <View style={styles.row}>
         <View style={[styles.badge, { backgroundColor: tint.bg }]}>
-          <Icon name={ICONS[game.id]} size={28} color={tint.fg} />
+          <Icon name={GAME_ICONS[game.id]} size={28} color={tint.fg} />
         </View>
         <View style={styles.meta}>
           <Text variant="heading" heading numberOfLines={1}>
@@ -237,13 +238,14 @@ const styles = StyleSheet.create({
   },
   list: {
     width: '100%',
-    maxWidth: 560,
     alignSelf: 'center',
     paddingHorizontal: space.lg,
     paddingTop: space.lg,
     gap: space.md,
     marginTop: -radius.lg,
   },
+  listRow: { flexDirection: 'row', alignItems: 'stretch', paddingHorizontal: space.xl },
+  listCell: { flex: 1 },
   row: { flexDirection: 'row', alignItems: 'center', gap: space.md },
   badge: {
     width: 52,

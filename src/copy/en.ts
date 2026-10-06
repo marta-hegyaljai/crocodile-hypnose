@@ -104,6 +104,7 @@ export const en = {
       stillness: '{n}/100 still',
       firefly: '{n} of {total} rounds',
       breathing: '{n} breaths',
+      breathingOne: '1 breath',
     },
     stillness: {
       restFinger: ph('[Rest a finger on the lily pad and keep it still]'), // PLACEHOLDER

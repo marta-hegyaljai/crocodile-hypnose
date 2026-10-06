@@ -6,9 +6,10 @@ import { t } from '@/copy';
 import { durationLabel } from '@/features/map/stopLabels';
 import { useFeedback } from '@/services/feedback';
 import { AtmosphereProvider, palette, radius, space, useTheme, withAlpha } from '@/theme';
-import { Button, Chip, IconButton, Reveal, Screen, Text } from '@/ui';
+import { Button, Chip, Icon, IconButton, Reveal, Screen, Text } from '@/ui';
 
 import type { GameDef, GameResult } from './catalog';
+import { GAME_ICONS, GAME_TINTS } from './gameArt';
 
 export type GamePhase = 'intro' | 'playing' | 'paused' | 'ended';
 
@@ -111,6 +112,13 @@ function ShellBody({
   const short = height < 700;
   const title = t(game.titleKey);
   const cardBg = night ? withAlpha(palette.nightRiver, 0.86) : colors.surface;
+  const tint = GAME_TINTS[game.id];
+  // Short phones: a tighter card so the calm croc stays in view behind it.
+  const sheetPad = {
+    paddingTop: short ? space.lg : space.xl,
+    paddingBottom: insets.bottom + (short ? space.lg : space.xl),
+    gap: short ? space.sm : space.md,
+  };
 
   return (
     <Screen scroll={false} padded={false} edges={[]} testID={testID}>
@@ -170,17 +178,27 @@ function ShellBody({
               style={[
                 styles.sheet,
                 shadow.raised,
+                sheetPad,
                 {
                   backgroundColor: cardBg,
-                  paddingBottom: insets.bottom + space.xl,
                   borderColor: night ? withAlpha(palette.shallows, 0.22) : 'transparent',
                 },
               ]}
               testID="game-intro"
             >
-              <Text variant={short ? 'heading' : 'title'} heading testID="game-intro-title">
-                {title}
-              </Text>
+              <View style={styles.titleRow}>
+                <View style={[styles.badge, { backgroundColor: tint.bg }]}>
+                  <Icon name={GAME_ICONS[game.id]} size={24} color={tint.fg} />
+                </View>
+                <Text
+                  variant={short ? 'heading' : 'title'}
+                  heading
+                  style={styles.titleText}
+                  testID="game-intro-title"
+                >
+                  {title}
+                </Text>
+              </View>
               <Text variant="body" tone="secondary" testID="game-intro-howto">
                 {t(game.howToKey)}
               </Text>
@@ -247,37 +265,56 @@ function ShellBody({
               style={[
                 styles.sheet,
                 shadow.raised,
+                sheetPad,
                 {
                   backgroundColor: cardBg,
-                  paddingBottom: insets.bottom + space.xl,
                   borderColor: night ? withAlpha(palette.shallows, 0.22) : 'transparent',
                 },
               ]}
               testID="game-end"
             >
-              <Text variant="label" tone="secondary">
-                {t('games.shell.endTitle')}
-              </Text>
-              <Text variant="title" heading color={colors.textAccent} testID="game-result">
-                {resultLabel(result)}
-              </Text>
+              <View style={styles.titleRow}>
+                <View style={[styles.badge, { backgroundColor: tint.bg }]}>
+                  <Icon name="check" size={24} color={tint.fg} />
+                </View>
+                <View style={styles.titleText}>
+                  <Text variant="label" tone="secondary">
+                    {t('games.shell.endTitle')}
+                  </Text>
+                  <Text
+                    variant={short ? 'heading' : 'title'}
+                    heading
+                    color={colors.textAccent}
+                    testID="game-result"
+                  >
+                    {resultLabel(result)}
+                  </Text>
+                </View>
+              </View>
               <Text variant="body" tone="secondary" testID="game-eyes-closed">
                 {t('games.shell.eyesClosed')}
               </Text>
-              <Button
-                label={t('games.shell.done')}
-                size="lg"
-                fullWidth
-                onPress={onLeave}
-                testID="game-done"
-              />
-              <Button
-                label={t('games.shell.playAgain')}
-                variant="ghost"
-                fullWidth
-                onPress={start}
-                testID="game-play-again"
-              />
+              <View style={short ? styles.actionsRow : styles.actions}>
+                <View style={short ? styles.actionFlex : undefined}>
+                  <Button
+                    label={t('games.shell.done')}
+                    size={short ? 'md' : 'lg'}
+                    fullWidth
+                    onPress={onLeave}
+                    testID="game-done"
+                  />
+                </View>
+                <View style={short ? styles.actionFlex : undefined}>
+                  <Button
+                    label={t('games.shell.playAgain')}
+                    variant="ghost"
+                    size={short ? 'md' : undefined}
+                    fullWidth
+                    onPress={start}
+                    testID="game-play-again"
+                  />
+                </View>
+              </View>
             </View>
           </Reveal>
         </View>
@@ -304,10 +341,20 @@ const styles = StyleSheet.create({
     borderTopRightRadius: radius.xl,
     borderWidth: 1,
     borderBottomWidth: 0,
-    paddingTop: space.xl,
     paddingHorizontal: space.xl,
-    gap: space.md,
   },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: space.md },
+  titleText: { flex: 1 },
+  badge: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  actions: { gap: space.md },
+  actionsRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: space.sm },
+  actionFlex: { flex: 1 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
   overlay: {
     position: 'absolute',

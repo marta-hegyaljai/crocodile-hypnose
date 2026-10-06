@@ -18,6 +18,7 @@ import { Chip, Text } from '@/ui';
 
 import type { GameProps } from '../GameShell';
 import { BREATH_PERIOD_MS, BreathCounter, guidePhase } from '../scoring';
+import { resultLabel } from '../resultLabel';
 import { useGameClock } from '../useGameClock';
 
 export const BREATHING_DURATION_MS = 80_000;
@@ -100,11 +101,11 @@ export function BreathingGame({ running, ended, onFinish, crocName }: GameProps)
 
   const guideStyle = useAnimatedStyle(() => ({
     transform: [{ scale: 0.72 + guide.value * 0.28 }],
-    opacity: 0.5 + guide.value * 0.3,
+    opacity: 0.55 + guide.value * 0.35,
   }));
   const fillStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: 0.3 + fill.value * 0.66 }],
-    opacity: 0.45 + fill.value * 0.45,
+    transform: [{ scale: 0.3 + fill.value * 0.64 }],
+    opacity: 0.82 + fill.value * 0.18,
   }));
 
   return (
@@ -122,6 +123,7 @@ export function BreathingGame({ running, ended, onFinish, crocName }: GameProps)
           crocName={crocName}
           leafSize={Math.min(Math.round(width * 0.22), Math.round(height * 0.15))}
           farReeds={false}
+          celebrate={ended}
         />
       </View>
       {running || ended ? (
@@ -144,9 +146,9 @@ export function BreathingGame({ running, ended, onFinish, crocName }: GameProps)
                   width: ring,
                   height: ring,
                   borderRadius: ring / 2,
-                  borderWidth: 3,
-                  borderColor: withAlpha(palette.white, 0.85),
-                  backgroundColor: withAlpha(palette.shallows, 0.25),
+                  borderWidth: 2,
+                  borderColor: withAlpha(palette.white, 0.9),
+                  backgroundColor: withAlpha(palette.white, 0.06),
                 },
                 guideStyle,
               ]}
@@ -155,29 +157,35 @@ export function BreathingGame({ running, ended, onFinish, crocName }: GameProps)
             <Animated.View
               style={[
                 styles.circle,
-                {
-                  width: ring,
-                  height: ring,
-                  borderRadius: ring / 2,
-                  backgroundColor: withAlpha(palette.amberGlow, 0.75),
-                },
+                styles.breath,
+                { width: ring, height: ring, borderRadius: ring / 2 },
                 fillStyle,
               ]}
-            />
+            >
+              <View
+                style={[
+                  styles.breathCore,
+                  { width: ring * 0.62, height: ring * 0.62, borderRadius: ring * 0.31 },
+                ]}
+              />
+            </Animated.View>
           </View>
-          <View
-            style={[styles.cue, { top: insets.top + space.xxxl + space.lg }]}
-            pointerEvents="none"
-          >
-            <Text variant="subheading" tone="secondary" align="center" testID="breathing-cue">
-              {inhale ? t('games.breathing.holdIn') : t('games.breathing.releaseOut')}
-            </Text>
-            <Chip
-              label={t('games.result.breathing', { n: breaths })}
-              tone="points"
-              testID="breathing-count"
-            />
-          </View>
+          {running ? (
+            <View
+              style={[styles.cue, { top: insets.top + space.xxxl + space.lg }]}
+              pointerEvents="none"
+            >
+              <Text variant="subheading" tone="secondary" align="center" testID="breathing-cue">
+                {inhale ? t('games.breathing.holdIn') : t('games.breathing.releaseOut')}
+              </Text>
+              <Chip
+                label={resultLabel({ gameId: 'breathing', breaths })}
+                tone="neutral"
+                icon="leaf"
+                testID="breathing-count"
+              />
+            </View>
+          ) : null}
         </>
       ) : null}
       {running ? (
@@ -231,6 +239,14 @@ const styles = StyleSheet.create({
   root: { flex: 1 },
   ringWrap: { position: 'absolute', alignItems: 'center', justifyContent: 'center' },
   circle: { position: 'absolute' },
+  breath: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: palette.amber,
+    borderWidth: 3,
+    borderColor: withAlpha(palette.white, 0.55),
+  },
+  breathCore: { backgroundColor: withAlpha(palette.amberGlow, 0.9) },
   cue: {
     position: 'absolute',
     left: space.xl,

@@ -2,10 +2,13 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Platform, Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
 import Animated, {
   Easing,
+  cancelAnimation,
   interpolate,
   useAnimatedStyle,
   useDerivedValue,
   useSharedValue,
+  withRepeat,
+  withSequence,
   withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -90,6 +93,48 @@ export function StillnessGame({ running, ended, onFinish, crocName }: GameProps)
   }, [running]);
 
   const depth = Math.round(Math.min(width, 440) * 0.42);
+
+  // The lily pad's glow: a slow invitation pulse until a finger rests on it, then a warm, steady
+  // ring under a slightly pressed pad (presentation only; the pad still measures the same).
+  const pressed = useSharedValue(0);
+  const invite = useSharedValue(0);
+  const touchMode = source === 'touch' && running;
+  useEffect(() => {
+    if (!touchMode || reducedMotion) {
+      cancelAnimation(invite);
+      invite.value = 0;
+      return;
+    }
+    invite.value = withRepeat(
+      withSequence(
+        withTiming(1, { duration: 1400, easing: Easing.inOut(Easing.sin) }),
+        withTiming(0, { duration: 1400, easing: Easing.inOut(Easing.sin) }),
+      ),
+      -1,
+      false,
+    );
+    return () => cancelAnimation(invite);
+  }, [touchMode, reducedMotion, invite]);
+  const setPressed = (down: boolean) => {
+    pressed.value = reducedMotion
+      ? down
+        ? 1
+        : 0
+      : withTiming(down ? 1 : 0, { duration: 180, easing: Easing.out(Easing.quad) });
+  };
+  const glowStyle = useAnimatedStyle(() => {
+    const idle = 0.34 + invite.value * 0.22;
+    return {
+      opacity: idle + (0.85 - idle) * pressed.value,
+      transform: [
+        { scale: 1 + invite.value * 0.05 * (1 - pressed.value) + pressed.value * 0.14 },
+        { scaleY: 0.78 },
+      ],
+    };
+  });
+  const padStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: 1 - pressed.value * 0.05 }],
+  }));
   const sourceRef = useRef(source);
   useEffect(() => {
     sourceRef.current = source;
@@ -180,13 +225,14 @@ export function StillnessGame({ running, ended, onFinish, crocName }: GameProps)
           crocName={crocName}
           leafSize={Math.min(Math.round(width * 0.22), Math.round(height * 0.15))}
           farReeds={false}
+          celebrate={ended}
         />
         <Animated.View
           style={[StyleSheet.absoluteFill, { backgroundColor: palette.nightRiver }, dusk]}
           testID="stillness-dusk"
         />
       </View>
-      {running || ended ? (
+      {running ? (
         <View
           style={[styles.cue, { top: insets.top + space.xxxl + space.lg }]}
           pointerEvents="none"
@@ -203,18 +249,23 @@ export function StillnessGame({ running, ended, onFinish, crocName }: GameProps)
             touching.current = true;
             rested.current = true;
             lastPoint.current = null;
+            setPressed(true);
           }}
           onPressOut={() => {
             touching.current = false;
             lastPoint.current = null;
+            setPressed(false);
           }}
           {...moveHandlers}
           accessibilityRole="button"
           accessibilityLabel={t('games.stillness.a11yPad')}
           testID="stillness-pad"
         >
-          <View style={styles.padGlow} />
-          <LilyPad size={PAD} flower rotation={-12} />
+          <Animated.View style={[styles.padGlow, glowStyle]} />
+          <Animated.View style={[styles.padRing, glowStyle]} />
+          <Animated.View style={padStyle}>
+            <LilyPad size={PAD} flower rotation={-12} />
+          </Animated.View>
         </Pressable>
       ) : null}
     </View>
@@ -233,9 +284,17 @@ const styles = StyleSheet.create({
   },
   padGlow: {
     position: 'absolute',
-    width: PAD + 24,
-    height: PAD * 0.7,
-    borderRadius: PAD,
-    backgroundColor: withAlpha(palette.amberGlow, 0.35),
+    width: PAD + 36,
+    height: PAD + 36,
+    borderRadius: (PAD + 36) / 2,
+    backgroundColor: withAlpha(palette.amberGlow, 0.7),
+  },
+  padRing: {
+    position: 'absolute',
+    width: PAD + 56,
+    height: PAD + 56,
+    borderRadius: (PAD + 56) / 2,
+    borderWidth: 2,
+    borderColor: withAlpha(palette.white, 0.7),
   },
 });

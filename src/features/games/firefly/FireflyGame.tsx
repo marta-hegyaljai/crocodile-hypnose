@@ -72,7 +72,8 @@ export function FireflyGame({ running, ended, onFinish, crocName }: GameProps) {
           height={height}
           stage="hatchling"
           expression={eyesClosed ? 'eyesClosed' : running ? 'calm' : 'happy'}
-          waterTop={height < 700 ? 0.6 : 0.64}
+          // Short phones: the croc sits higher so it stays in view above the end card.
+          waterTop={height < 700 ? 0.5 : 0.64}
           crocX={0.5}
           crocWidth={Math.min(Math.round(width * 0.62), 320)}
           crocName={crocName}

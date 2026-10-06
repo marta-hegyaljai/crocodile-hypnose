@@ -10,6 +10,8 @@ export function resultLabel(result: GameResult): string {
     case 'firefly':
       return t('games.result.firefly', { n: result.rounds, total: result.total });
     case 'breathing':
-      return t('games.result.breathing', { n: result.breaths });
+      return result.breaths === 1
+        ? t('games.result.breathingOne')
+        : t('games.result.breathing', { n: result.breaths });
   }
 }
