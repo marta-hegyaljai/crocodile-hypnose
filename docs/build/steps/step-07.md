@@ -14,3 +14,7 @@ Builds on S05 (idempotent session-completed events, client points from `src/serv
 - `npm run check`, server tests, targeted e2e pass; e2e: complete sessions/games → points on the server, weekly goal progress, a growth stage reached (via a dev hook for minutes), buy and place a decoration, a badge earned.
 - Points, growth and badges can't be gamed by replaying the same event, by two devices, or by a crafted client request.
 - Habitat and growth moments feel rewarding and on-theme at 390x844, 360x640, 820x1180; reduced motion respected.
+
+## Carried over from the S05 review
+- The ledger takes stop type from server content, checks the stop exists, and decides first-time on the server alone (today a client "not first" claim is kept). Consider a rate limit on `/me/events`.
+- One refused event must not mark the whole event stream rejected (later events stop syncing).

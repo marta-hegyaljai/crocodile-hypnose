@@ -12,3 +12,6 @@
 - `npm run check`, server tests, targeted e2e pass; e2e: change reminder time, toggle consent off (mood deleted on the server), re-take safety check (caution mode changes the map), export data, delete account with password.
 - All settings persist across reload and devices; every toggle takes effect immediately.
 - Clear, calm, on-theme at 390x844, 360x640, 820x1180; keyboard and screen-reader friendly.
+
+## Carried over from the S05 review
+- Withdrawing mood consent deletes the server mood stream, the onboarding moods, and the local mood log including pending entries.
