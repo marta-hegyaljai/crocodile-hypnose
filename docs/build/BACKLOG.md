@@ -42,3 +42,9 @@
 | 4 | QA r1 m7 | Web cold reload offline needs a service worker. |
 | 4 | QA r1 m8 | Stale tab/device doesn't refresh progress until reload (refetch on focus/visibility). |
 | 4 | QA r1 m11 | Keyboard: ~19 stop nodes before the tabs; sheet backdrop is a tab stop. |
+| 5 | Review r1 | Audio heard while JS is suspended (mobile web, locked screen) isn't counted as listened; count forward steps that match wall time. Confirm on iOS Safari. |
+| 5 | Review r1 | Another tab switching user mid-session: completion and resume point land on the new account. |
+| 5 | Review r1 | A resumed run reuses its mood-before id, so a new answer is dropped. |
+| 5 | Review r1 | Keyboard focus on dimmed player controls doesn't reveal them. |
+| 6 | Review r1 | Stillness state not reset on pause/end; no native silence fallback to touch; route accepts any stop/game pairing; breathing guide ring at 10 Hz from JS; breathing hold has no screen-reader alternative; pause overlay doesn't trap focus; parseRecords doesn't validate best; no lifecycle/route tests. |
+| 3 | Review S06 | Flaky unit test: onboarding/screens.test.tsx "hatches on the third tap" fails intermittently under full-suite load. |

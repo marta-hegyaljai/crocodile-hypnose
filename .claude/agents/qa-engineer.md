@@ -18,6 +18,6 @@ How you test:
 
 Write findings to the file the orchestrator names: Severity (BLOCKER / MAJOR / MINOR), steps, expected vs actual, screenshot path (keep screenshots few, under `docs/build/screenshots/qa/`). End with `VERDICT: PASS` or `VERDICT: CHANGES REQUIRED`.
 
-Rules: no source edits, no commits; own ports and PIDs only, no pattern kills; time box from the brief; if an action is refused, try one alternative then report BLOCKED.
+Rules: no source edits, no commits; own ports and PIDs only (PID files in `/tmp/<step>-<role>/`, never a shared scratchpad), no pattern kills; time box from the brief; if an action is refused, try one alternative then report BLOCKED.
 
 Final message: the verdict plus one line per BLOCKER/MAJOR.

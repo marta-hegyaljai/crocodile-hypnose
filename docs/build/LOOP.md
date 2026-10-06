@@ -44,7 +44,7 @@ A step is one item from `PLAN.md` → Steps (or a tightly coupled bundle). Its i
                       [4] Orchestrator: checks green, merges to main, marks status, pushes
 ```
 
-**Pipelining.** While step N is in review/QA/design, the engineer for step N+1 starts in its own git worktree (`../crocodile-hypnose-wt/S<nn>`, branch `step/S<nn>`), as long as N+1 doesn't depend on unmerged code from N. The orchestrator merges `main` into a step branch before its review starts if `main` moved. `claude/fervent-rubin-7i8lut` is the integration branch and is kept equal to `main`.
+**Pipelining.** While step N is in review/QA/design, the engineer for step N+1 starts in its own git worktree (`../crocodile-hypnose-wt/S<nn>`, branch `step/S<nn>`), as long as N+1 doesn't depend on unmerged code from N. The orchestrator merges `main` into a step branch before its review starts if `main` moved. Because `main` takes squash merges, a step branched from another unmerged step is brought up to date with `git rebase --onto origin/main <parent-step-tip> step/S<nn>` (only its own commits are replayed), not a merge. `claude/fervent-rubin-7i8lut` is the integration branch and is kept equal to `main`.
 
 ## Time boxes
 
@@ -72,7 +72,7 @@ Agents are told their time box in the brief. The orchestrator checks on any agen
 7. **Scope stays put.** Work belonging to a later step is sent back unless the orchestrator logged a decision.
 8. **Short briefs, short reports.** The brief names the step, the docs that matter, the base commit, the worktree, the ports and the time box. Reports are short: verdict, commands, findings. No restating of the requirements.
 9. **Trust the fast checks.** Engineers run `npm run check` (+ `npm run server:test` when `server/` changed) plus the targeted e2e specs; the full e2e suite only when the harness or shared flows changed.
-10. **Shared machine, own processes only.** Every agent starts servers on the ports its brief assigns (API `PORT`, web via `npx serve <dir> --listen <port> --single`, `E2E_PORT`), records their PIDs, and stops only those PIDs. `pkill -f`, `killall` or any pattern-based kill is forbidden.
+10. **Shared machine, own processes only.** Every agent starts servers on the ports its brief assigns (API `PORT`, web via `npx serve <dir> --listen <port> --single`, `E2E_PORT`), records their PIDs in a directory only it uses (`/tmp/<step>-<role>/`, never a shared scratchpad), checks a PID's port and cwd before killing it, and stops only those PIDs. `pkill -f`, `killall` or any pattern-based kill is forbidden.
 11. **Copy.** No agent invents marketing copy, slogans or creative names. All text lives in `src/copy` as neutral placeholders until MHP provides the real text.
 12. **Agents don't commit.** The orchestrator commits each round's work with a clear message.
 

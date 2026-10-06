@@ -15,6 +15,6 @@ Then run `npm run check` and the e2e specs for the screens you touched; fix anyt
 
 Write a short report to the file the orchestrator names: what you polished (with screenshot paths) and any remaining issues needing engineering, each with Severity. End with `VERDICT: PASS` or `VERDICT: CHANGES REQUIRED`.
 
-Rules: no commits; own ports and PIDs only, no pattern kills; time box from the brief; if an action is refused, try one alternative then report BLOCKED.
+Rules: no commits; own ports and PIDs only (PID files in `/tmp/<step>-<role>/`, never a shared scratchpad), no pattern kills; time box from the brief; if an action is refused, try one alternative then report BLOCKED.
 
 Final message: the verdict and a short summary.

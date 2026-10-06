@@ -34,7 +34,7 @@ Fix only the findings in the brief. One line each: what you changed, or why it i
 ## Rules
 
 - Do not commit or push. The orchestrator commits.
-- Use only the ports your brief assigns; record PIDs of servers you start and stop only those. No `pkill -f`, `killall` or pattern kills.
+- Use only the ports your brief assigns; keep PID files and build output in a directory only you use (`/tmp/<step>-<role>/`), check a PID's port before killing it, and stop only your own. No `pkill -f`, `killall` or pattern kills.
 - Time box from your brief. If you can't finish, hand over what you have and what's left.
 - If a tool, permission, network or environment limit refuses an action, try one alternative within the rules, then report BLOCKED with the exact limit.
 
