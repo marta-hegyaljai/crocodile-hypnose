@@ -8,6 +8,8 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState, type MutableRefObject } from 'react';
 import { Platform } from 'react-native';
 
+import { tickSeconds, useForeground } from './clock';
+
 /**
  * One track for a session, in two parts so that playback status updates (several a second) only
  * re-render the small piece of UI that shows them:
@@ -164,6 +166,7 @@ export function useTrackStatus(track: Track, options: TrackStatusOptions = {}): 
   const { player, wanted, silent, fallbackDurationSec, goSilent, seekRequest } = track;
   const status = useAudioPlayerStatus(player);
   const [timerPosition, setTimerPosition] = useState(0);
+  const foreground = useForeground();
   const timerFinished = silent && timerPosition >= fallbackDurationSec;
   const latest = useRef(status);
   const onFinish = useRef(options.onFinish);
@@ -175,7 +178,7 @@ export function useTrackStatus(track: Track, options: TrackStatusOptions = {}): 
 
   // Stall watch: asked to play, but nothing happens for a while.
   useEffect(() => {
-    if (!wanted || silent) return;
+    if (!wanted || silent || !foreground) return;
     const start = now();
     let lastMove = { at: start, position: latest.current.currentTime };
     const timer = setInterval(() => {
@@ -191,19 +194,20 @@ export function useTrackStatus(track: Track, options: TrackStatusOptions = {}): 
       }
     }, TICK_MS);
     return () => clearInterval(timer);
-  }, [wanted, silent, stallMs, now, goSilent]);
+  }, [wanted, silent, foreground, stallMs, now, goSilent]);
 
   // Silent fallback: a plain clock.
   useEffect(() => {
-    if (!silent || !wanted || timerFinished) return;
+    if (!silent || !wanted || !foreground || timerFinished) return;
     let last = now();
     const timer = setInterval(() => {
       const t = now();
-      setTimerPosition((p) => Math.min(fallbackDurationSec, p + (t - last) / 1000));
+      const add = tickSeconds(t - last);
       last = t;
+      setTimerPosition((p) => Math.min(fallbackDurationSec, p + add));
     }, TICK_MS);
     return () => clearInterval(timer);
-  }, [silent, wanted, timerFinished, fallbackDurationSec, now]);
+  }, [silent, wanted, foreground, timerFinished, fallbackDurationSec, now]);
 
   const duration =
     !silent && status.isLoaded && Number.isFinite(status.duration) && status.duration > 0

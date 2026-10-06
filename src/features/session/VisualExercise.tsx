@@ -20,6 +20,7 @@ import {
   type NightLayout,
 } from './NightRiver';
 import { useDevFastForward, type Listening } from './useListening';
+import { tickSeconds, useForeground } from './clock';
 import { formatClock } from './useTrackPlayer';
 
 const TICK_MS = 250;
@@ -31,16 +32,19 @@ const TICK_MS = 250;
 export function useSessionClock(durationSec: number, running: boolean, startAt = 0) {
   const [position, setPosition] = useState(Math.min(startAt, durationSec));
   const finished = position >= durationSec;
+  const foreground = useForeground();
   useEffect(() => {
-    if (!running || finished) return;
+    // Stands still in the background; each tick is capped, so a sleeping timer never jumps.
+    if (!running || !foreground || finished) return;
     let last = Date.now();
     const timer = setInterval(() => {
       const now = Date.now();
-      setPosition((p) => Math.min(durationSec, p + (now - last) / 1000));
+      const add = tickSeconds(now - last);
       last = now;
+      setPosition((p) => Math.min(durationSec, p + add));
     }, TICK_MS);
     return () => clearInterval(timer);
-  }, [running, finished, durationSec]);
+  }, [running, foreground, finished, durationSec]);
   const seekTo = useCallback(
     (to: number) => setPosition(Math.max(0, Math.min(durationSec, to))),
     [durationSec],
