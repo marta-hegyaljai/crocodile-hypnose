@@ -58,3 +58,12 @@ jest.mock('expo-notifications', () => ({
   SchedulableTriggerInputTypes: { DAILY: 'daily' },
   AndroidImportance: { DEFAULT: 3 },
 }));
+
+jest.mock('expo-sensors', () => ({
+  DeviceMotion: {
+    isAvailableAsync: jest.fn(async () => false),
+    requestPermissionsAsync: jest.fn(async () => ({ granted: false })),
+    setUpdateInterval: jest.fn(),
+    addListener: jest.fn(() => ({ remove: jest.fn() })),
+  },
+}));

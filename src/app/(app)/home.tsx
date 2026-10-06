@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { t } from '@/copy';
 import type { StopView, TodaysSession } from '@/content/journey';
 import { localContent } from '@/content/repository';
+import { gameIdOfStop } from '@/features/games/catalog';
 import { useTapShield } from '@/features/layout/TapShield';
 import { HomeHeader } from '@/features/home/HomeHeader';
 import { TodayCard } from '@/features/home/TodayCard';
@@ -41,7 +42,10 @@ export default function HomeScreen() {
     (stopId: string) => {
       // The session screen opens where the button was: swallow the rest of a double tap.
       shield();
-      router.push({ pathname: '/session/[stopId]', params: { stopId } });
+      const stop = localContent.stop(stopId);
+      const gameId = stop ? gameIdOfStop(stop) : undefined;
+      if (gameId) router.push({ pathname: '/game/[gameId]', params: { gameId, stopId } });
+      else router.push({ pathname: '/session/[stopId]', params: { stopId } });
     },
     [shield],
   );
