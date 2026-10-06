@@ -32,6 +32,9 @@ export function useGameClock(running: boolean, onTick?: (timeMs: number) => void
   const [onFrame] = useState(() => {
     const scale = timeScale();
     return (info: FrameInfo) => {
+      // Runs on the UI thread on iOS/Android: without this directive the callback is a plain JS
+      // function, and Reanimated never calls it (useGameClock.test.tsx guards this).
+      'worklet';
       if (info.timeSincePreviousFrame === null) return;
       // A long gap (tab in the background) is not play time: cap a frame at a quarter second.
       const dt = Math.min(info.timeSincePreviousFrame, 250);

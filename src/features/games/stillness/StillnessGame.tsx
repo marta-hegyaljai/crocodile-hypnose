@@ -58,6 +58,18 @@ export function StillnessGame({ running, ended, onFinish, crocName }: GameProps)
   const sunk = useSharedValue(0);
   const lastTick = useRef(0);
 
+  // One alive flag for the component's life: pausing (or the app going to the background) must not
+  // drop the probe's result, or the game would sit in 'probing' for good.
+  const alive = useRef(true);
+  useEffect(() => {
+    alive.current = true;
+    return () => {
+      alive.current = false;
+      motion.current?.stop();
+      motion.current = null;
+    };
+  }, []);
+
   // Probe the sensor once the game starts; fall back to the lily pad when it stays silent.
   useEffect(() => {
     if (!running || motion.current) return;
@@ -65,9 +77,8 @@ export function StillnessGame({ running, ended, onFinish, crocName }: GameProps)
       moved.current += d;
     });
     motion.current = src;
-    let alive = true;
     void src.available.then((ok) => {
-      if (!alive) return;
+      if (!alive.current) return;
       if (ok) {
         tracker.current = new StillnessTracker({ fullMotion: SENSOR_FULL_MOTION });
         setSource('sensor');
@@ -76,11 +87,7 @@ export function StillnessGame({ running, ended, onFinish, crocName }: GameProps)
         setSource('touch');
       }
     });
-    return () => {
-      alive = false;
-    };
   }, [running]);
-  useEffect(() => () => motion.current?.stop(), []);
 
   const depth = Math.round(Math.min(width, 440) * 0.42);
   const sourceRef = useRef(source);
@@ -93,6 +100,13 @@ export function StillnessGame({ running, ended, onFinish, crocName }: GameProps)
     const dt = Math.max(0, time - lastTick.current);
     lastTick.current = time;
     if (finished.current) return;
+    // The game always ends at its duration, even if the sensor is still being probed or the
+    // finger never rested (then no samples were taken and the score is the gentle default).
+    if (time >= STILLNESS_DURATION_MS) {
+      finished.current = true;
+      onFinish({ gameId: 'stillness', score: tracker.current.score() });
+      return;
+    }
     if (sourceRef.current === 'probing') return;
     if (sourceRef.current === 'touch' && !rested.current) return;
     // A finger lifted off the pad is not stillness; the sensor is always "on".
@@ -105,10 +119,6 @@ export function StillnessGame({ running, ended, onFinish, crocName }: GameProps)
     const rate = still > 0.6 ? (still - 0.6) * 2.5 * SINK_PER_MS : -(0.6 - still) * RISE_PER_MS;
     const next = Math.max(0, Math.min(1, sunk.value + rate * dt));
     sunk.value = reducedMotion ? next : withTiming(next, { duration: 140, easing: Easing.linear });
-    if (time >= STILLNESS_DURATION_MS) {
-      finished.current = true;
-      onFinish({ gameId: 'stillness', score: tracker.current.score() });
-    }
   };
   const { timeMs } = useGameClock(running, onTick);
 
