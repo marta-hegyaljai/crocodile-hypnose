@@ -237,9 +237,12 @@ export function createFakeAuthClient(
       await gate('getProfile');
       return { ...checkAccess(token).user };
     },
-    async deleteAccount(token) {
+    async deleteAccount(token, password) {
       await gate('deleteAccount');
       const account = checkAccess(token);
+      if (account.password !== password) {
+        throw new AuthError('invalid_credentials', { status: 401 });
+      }
       accounts.delete(account.user.email);
     },
   };

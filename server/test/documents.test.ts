@@ -275,8 +275,41 @@ describe('GET/PUT /me/settings', () => {
     const doc = settings();
     const res = await put('settings', doc);
     assert.equal(res.statusCode, 200);
-    assert.deepEqual(res.json<DocBody>().settings, { ...doc, storedAt: ctx.clock.now });
+    const { fieldsAt, ...stored } = res.json<DocBody>().settings as Record<string, unknown>;
+    // A document without per-field stamps (an older app) is stored with them, one step newer.
+    assert.deepEqual(stored, {
+      ...doc,
+      reducedMotion: null,
+      updatedAt: doc.updatedAt + 1,
+      storedAt: ctx.clock.now,
+    });
+    assert.deepEqual(fieldsAt, {
+      doc: doc.updatedAt + 1,
+      crocName: doc.updatedAt,
+      goals: doc.updatedAt,
+      experience: doc.updatedAt,
+      sessionLength: doc.updatedAt,
+      reminder: doc.updatedAt,
+      moodConsent: doc.updatedAt,
+      safety: doc.updatedAt,
+      sound: doc.updatedAt,
+      haptics: doc.updatedAt,
+      reducedMotion: 0,
+    });
     assert.equal((await get('settings')).json<DocBody>().settings?.crocName, 'Croc 🐊');
+  });
+
+  test('the reduced-motion override is optional and a boolean or null', async () => {
+    for (const value of [true, false, null]) {
+      ctx.clock.advance(10);
+      const res = await put(
+        'settings',
+        settings({ reducedMotion: value, updatedAt: ctx.clock.now }),
+      );
+      assert.equal(res.statusCode, 200);
+      assert.equal(res.json<DocBody>().settings?.reducedMotion, value);
+    }
+    assert.equal((await put('settings', settings({ reducedMotion: 'yes' }))).statusCode, 400);
   });
 
   test('validates the reminder time and the enums', async () => {

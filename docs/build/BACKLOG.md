@@ -54,3 +54,8 @@
 | 7 | QA r1 | Double-tap Continue on reward/growth moment lands on the Games tab. Weekly toast reappears after reload. Growth-moment sound autoplay console error on reload. Crafted game events add calm minutes (bounded by the daily cap). |
 | 7 | Fix r1 | Client pendingGains ignores the 14-day back-date window: a device offline > 14 days shows points the server won’t pay. |
 | 7 | Review r2 | A crafted client can reach days7/days30 and a couple of past weekly goals ~14 days early; >30 activities arriving on one UTC day lose the excess permanently. |
+| 8 | QA r1 | Consent off: no confirm, "deleted" note below the fold, says deleted while only queued offline. |
+| 8 | QA r1 | Reminder time: empty field gives no error. Email ellipsised in the header (matters before delete). |
+| 8 | QA r1 | Keyboard/SR: Tab continues into the inactive Home map; radio groups unnamed, no arrow keys; all section titles are h1; Escape doesn't close the delete confirmation. Export block is a small inner scroller. |
+| 8 | Review r1 | Older clients drop `reducedMotion` (needs settings v2 before release); ExportData not keyed on user; consent check vs purge interleave can leave one entry; no test for DELETE /me rate limit. |
+| 8 | Review r2 | If the app is killed between the consent-off write and scrubMoods, the local mood log survives the restart (server already purged); scrub on load when resolved consent is off with a stamp > 0. |

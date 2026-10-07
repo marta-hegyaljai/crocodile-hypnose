@@ -5,6 +5,7 @@ import { Platform } from 'react-native';
 
 import { RootGate } from '@/features/layout/RootGate';
 import { TapShieldProvider, useTapShield } from '@/features/layout/TapShield';
+import { MotionFollowsSettings } from '@/features/profile/SettingsSections';
 import { MotionProvider } from '@/motion/MotionProvider';
 import { AuthProvider, useAuth } from '@/services/auth';
 import { appAuthStore } from '@/services/auth/instance';
@@ -89,6 +90,7 @@ function GuardedStack() {
 
   return (
     <MotionProvider>
+      <MotionFollowsSettings />
       <AtmosphereProvider>
         {/* Keep the splash (native) / a blank page (web) until the fonts are in and we know whether
             someone is signed in; afterwards a loading screen bridges a profile load. */}
@@ -111,6 +113,8 @@ function GuardedStack() {
               <Stack.Screen name="(app)" />
               <Stack.Screen name="session/[stopId]" />
               <Stack.Screen name="game/[gameId]" />
+              <Stack.Screen name="settings/help" />
+              <Stack.Screen name="settings/privacy" />
             </Stack.Protected>
             {/* ...the others walk through onboarding first (resumable at any step). */}
             <Stack.Protected guard={signedIn && !onboardingDone}>

@@ -51,6 +51,10 @@ export interface ProfileClient {
     items: StreamTypes[S][],
     accessToken: string,
   ): Promise<StreamTypes[S][]>;
+  /** Deletes the user's mood data on the server (`DELETE /me/mood`). */
+  deleteMood(accessToken: string): Promise<void>;
+  /** Everything the server holds about the user (`GET /me/export`), as parsed JSON. */
+  exportData(accessToken: string): Promise<unknown>;
 }
 
 const streamField: Record<StreamKind, string> = { events: 'events', mood: 'entries' };
@@ -99,6 +103,14 @@ export function createHttpProfileClient(options: JsonRequestOptions): ProfileCli
   }
 
   return {
+    async deleteMood(accessToken) {
+      await request('DELETE', '/me/mood', { accessToken });
+    },
+    async exportData(accessToken) {
+      const body = await request<unknown>('GET', '/me/export', { accessToken });
+      if (!body || typeof body !== 'object') throw new AuthError('server_error');
+      return body;
+    },
     async listEvents(stream, accessToken) {
       return parseStream(stream, await request('GET', `/me/${stream}`, { accessToken }));
     },

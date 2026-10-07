@@ -4,8 +4,8 @@
  * the client sends, so a later app version can add fields by adding a schema version here (and
  * keeping the old one accepted until every client has moved on).
  *
- * Documents are written whole and merged last-write-wins on the client's `updatedAt`, so the
- * server never has to understand partial updates.
+ * Documents are written whole. Onboarding is merged last-write-wins on the client's `updatedAt`
+ * (one-way facts kept), settings field by field (`mergeSettings`), progress per stop.
  */
 import { ApiError, type ErrorCode } from './errors.ts';
 import {
@@ -134,6 +134,20 @@ const onboardingV1 = {
   },
 } as const;
 
+/** The user-editable settings fields; each is merged on its own (see `mergeSettings`). */
+export const SETTINGS_FIELDS = [
+  'crocName',
+  'goals',
+  'experience',
+  'sessionLength',
+  'reminder',
+  'moodConsent',
+  'safety',
+  'sound',
+  'haptics',
+  'reducedMotion',
+] as const;
+
 /** User settings, v1: what onboarding decided and what the settings screen (step 8) will edit. */
 const settingsV1 = {
   type: 'object',
@@ -176,6 +190,21 @@ const settingsV1 = {
     },
     sound: bool,
     haptics: bool,
+    /** Reduced-motion override: null follows the device. Optional (added after the first release). */
+    reducedMotion: nullableBool,
+    /**
+     * When each field was last changed (client time, see `mergeSettings`), and the `updatedAt` the
+     * stamps belong to. Optional: an older app writes the document whole and leaves them out (or
+     * stale), and then counts as having written every field at `updatedAt`.
+     */
+    fieldsAt: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['doc', ...SETTINGS_FIELDS],
+      properties: Object.fromEntries(
+        ['doc', ...SETTINGS_FIELDS].map((f) => [f, { type: 'integer', minimum: 0 }]),
+      ),
+    },
   },
 } as const;
 
@@ -253,6 +282,83 @@ export function bodySchemaFor(kind: DocumentKind): object {
   return versions.length === 1 ? versions[0]! : { anyOf: versions };
 }
 
+/**
+ * What a mood withdrawal leaves of an onboarding document: no stored first-session moods and no
+ * consent. It is one step newer than the copy it scrubs, so a device holding that copy takes the
+ * scrubbed one instead of writing its own back. Nothing to scrub: null.
+ */
+export function withoutMoods(data: Doc): Doc | null {
+  const first = record(data.firstSession);
+  if (first.moodBefore === null && first.moodAfter === null && data.moodConsent !== true) {
+    return null;
+  }
+  return {
+    ...data,
+    updatedAt: (Number(data.updatedAt) || 0) + 1,
+    moodConsent: false,
+    firstSession: { ...first, moodBefore: null, moodAfter: null },
+  };
+}
+
+type SettingsField = (typeof SETTINGS_FIELDS)[number];
+
+/**
+ * When each settings field was last changed. A document whose stamps do not belong to its
+ * `updatedAt` (none at all, or an older app changed it and kept the old stamps) counts as written
+ * whole at `updatedAt`; an absent reduced-motion choice (an app from before it existed) at 0.
+ */
+export function settingsStamps(doc: Doc): Record<SettingsField, number> {
+  const at = Number(doc.updatedAt) || 0;
+  const given = record(doc.fieldsAt);
+  const own = given.doc === at;
+  const out = {} as Record<SettingsField, number>;
+  for (const f of SETTINGS_FIELDS) {
+    const stamp = given[f];
+    if (own && typeof stamp === 'number') out[f] = Math.min(stamp, at);
+    else out[f] = f === 'reducedMotion' && doc.reducedMotion === undefined ? 0 : at;
+  }
+  return out;
+}
+
+/** The document's stamps belong to it (written by an app that keeps them). */
+export function hasOwnStamps(doc: Doc): boolean {
+  return record(doc.fieldsAt).doc === doc.updatedAt;
+}
+
+/** Equal stamps, different values: deterministic, so both sides agree; consent prefers off. */
+function bWinsTie(field: SettingsField, a: unknown, b: unknown): boolean {
+  const ja = JSON.stringify(a);
+  const jb = JSON.stringify(b);
+  if (ja === jb) return false;
+  if (field === 'moodConsent') return b === false;
+  return jb > ja;
+}
+
+/**
+ * Merges two copies of the settings field by field: the more recently changed value of each
+ * field wins, so a stale copy that changed one field never undoes another (mood consent in
+ * particular). Commutative and idempotent. Mirrors the app's `mergeSettings`.
+ */
+export function mergeSettings(a: Doc, b: Doc): Doc {
+  const sa = settingsStamps(a);
+  const sb = settingsStamps(b);
+  const out: Doc = { ...a };
+  const fieldsAt: Record<string, number> = {};
+  for (const f of SETTINGS_FIELDS) {
+    const va = a[f] ?? null;
+    const vb = b[f] ?? null;
+    out[f] = sb[f] > sa[f] || (sb[f] === sa[f] && bWinsTie(f, va, vb)) ? vb : va;
+    fieldsAt[f] = Math.max(sa[f], sb[f]);
+  }
+  const updatedAt = Math.max(Number(a.updatedAt) || 0, Number(b.updatedAt) || 0);
+  return { ...out, version: 1, updatedAt, fieldsAt: { doc: updatedAt, ...fieldsAt } };
+}
+
+/** Consent withdrawn in the settings: off, and decided at some point (not just the default). */
+export function moodConsentWithdrawn(settings: Doc): boolean {
+  return settings.moodConsent === false && settingsStamps(settings).moodConsent > 0;
+}
+
 const CONTROL_RE = /[\u0000-\u001f\u007f]/;
 
 type Doc = Record<string, unknown>;
@@ -293,6 +399,12 @@ export function checkDocumentRules(kind: DocumentKind, data: Doc, now: number): 
     throw new ApiError(400, 'invalid_request', `The ${kind} document is not valid.`, fields);
   }
   const updatedAt = typeof data.updatedAt === 'number' ? Math.min(data.updatedAt, now) : now;
+  if (kind === 'settings' && hasOwnStamps(data) && updatedAt !== data.updatedAt) {
+    // Clamped with the document, so they still belong to it.
+    const stamps = settingsStamps(data);
+    for (const f of SETTINGS_FIELDS) stamps[f] = Math.min(stamps[f], updatedAt);
+    return { ...data, updatedAt, fieldsAt: { doc: updatedAt, ...stamps } };
+  }
   return { ...data, updatedAt };
 }
 
@@ -318,11 +430,18 @@ export function resolveDocument(kind: DocumentKind, stored: Doc | null, incoming
     }
     return merged;
   }
+  if (kind === 'settings') {
+    const merged = mergeSettings(stored ?? incoming, incoming);
+    if (hasOwnStamps(incoming)) return merged;
+    // An older app writes whole documents and keeps the stamps it was given: what is stored must
+    // be newer than what it sent, or it would keep its own copy and send it again.
+    const updatedAt = Math.max(Number(merged.updatedAt), Number(incoming.updatedAt) + 1);
+    return { ...merged, updatedAt, fieldsAt: { ...record(merged.fieldsAt), doc: updatedAt } };
+  }
   if (!stored) return incoming;
   if (kind === 'gamification') return mergeGamification(stored, incoming);
   const storedAt = Number(stored.updatedAt);
   const incomingAt = Number(incoming.updatedAt);
-  if (kind !== 'onboarding') return incomingAt >= storedAt ? incoming : null;
   if (stored.completed === true && incoming.completed !== true) return null;
   if (incoming.completed === true && stored.completed !== true) return incoming;
   if (incomingAt < storedAt) return null;

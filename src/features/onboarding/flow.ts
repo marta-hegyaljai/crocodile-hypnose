@@ -1,4 +1,4 @@
-import type { CopyKey } from '@/copy';
+import { t, type CopyKey } from '@/copy';
 import {
   ONBOARDING_STEPS,
   SAFETY_QUESTION_COUNT,
@@ -53,6 +53,11 @@ export const CROC_NAME_PROBLEM_COPY: Record<'blank' | 'long', CopyKey> = {
   blank: 'onboarding.hatch.nameBlank',
   long: 'onboarding.hatch.nameLong',
 };
+
+/** What to tell the user about a croc name that cannot be used (the limit filled in). */
+export function crocNameProblemText(problem: 'blank' | 'long'): string {
+  return t(CROC_NAME_PROBLEM_COPY[problem], { n: CROC_NAME_MAX });
+}
 
 /** Trims and checks the croc's name. */
 export function checkCrocName(

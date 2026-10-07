@@ -3,7 +3,16 @@ import { memoryStorage, sharedStorage } from '@/test/fakeAuth';
 
 import { createDocumentStore, newerOf } from './documentStore';
 import { mergeOnboarding } from './mergeOnboarding';
-import { defaultOnboarding, isOnboardingDoc, type OnboardingDoc } from './types';
+import { mergeSettings, settingsStamps, stampSettings } from './mergeSettings';
+import {
+  defaultOnboarding,
+  defaultSettings,
+  isOnboardingDoc,
+  isSettingsDoc,
+  SETTINGS_FIELDS,
+  type OnboardingDoc,
+  type SettingsDoc,
+} from './types';
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
@@ -345,5 +354,58 @@ describe('document store', () => {
     await flush();
     expect(store.getState().userId).toBe('u2');
     expect(store.getState().doc.completed).toBe(false);
+  });
+
+  it('settles after one round trip when the client clock is ahead of the server clamp', async () => {
+    const serverNow = 1_000_000;
+    const clientNow = serverNow + 10 * 60_000;
+    // Another device already changed the name, a while ago.
+    let stored: SettingsDoc = {
+      ...defaultSettings(900_000),
+      crocName: 'Zed',
+      fieldsAt: {
+        doc: 900_000,
+        ...Object.fromEntries(SETTINGS_FIELDS.map((f) => [f, f === 'crocName' ? 900_000 : 0])),
+      } as never,
+    };
+    let puts = 0;
+    // The dev server's rules: updatedAt and every stamp are clamped to the server's time, then
+    // the copies merge field by field.
+    const clamp = (doc: SettingsDoc): SettingsDoc => {
+      const updatedAt = Math.min(doc.updatedAt, serverNow);
+      const stamps = settingsStamps(doc);
+      for (const f of SETTINGS_FIELDS) stamps[f] = Math.min(stamps[f], updatedAt);
+      return { ...doc, updatedAt, fieldsAt: { doc: updatedAt, ...stamps } };
+    };
+    const store = createDocumentStore<SettingsDoc>({
+      key: 'test.settings',
+      storage: memoryStorage(),
+      defaults: () => defaultSettings(),
+      validate: isSettingsDoc,
+      fetch: async () => stored,
+      push: async (_user, doc) => {
+        puts += 1;
+        stored = mergeSettings(stored, clamp(doc));
+        return { ...stored };
+      },
+      merge: mergeSettings,
+      stamp: stampSettings,
+      now: () => clientNow,
+      debounceMs: 0,
+      retryMs: { first: 5, max: 20 },
+    });
+    await store.getState().load('u1');
+    for (let i = 0; i < 4; i++) await flush();
+    expect(store.getState().doc.crocName).toBe('Zed');
+    expect(puts).toBe(0);
+
+    await store.getState().update((d) => ({ ...d, sound: !d.sound }));
+    for (let i = 0; i < 20; i++) await flush();
+
+    expect(puts).toBeLessThanOrEqual(2);
+    expect(store.getState().dirty).toBe(false);
+    const sound = !defaultSettings().sound;
+    expect(store.getState().doc).toMatchObject({ sound, crocName: 'Zed' });
+    expect(stored).toMatchObject({ sound, crocName: 'Zed', updatedAt: serverNow });
   });
 });

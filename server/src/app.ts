@@ -136,6 +136,8 @@ export async function buildApp({
       max: config.eventsRateLimit.max,
       timeWindow: config.eventsRateLimit.windowMs,
     },
+    // Account deletion checks the password: guessing is limited like a sign-in.
+    rateLimit: { max: config.authRateLimit.max, timeWindow: config.authRateLimit.windowMs },
   });
   await app.register(gamificationRoutes, { service, now, devHooks: config.devHooks });
 

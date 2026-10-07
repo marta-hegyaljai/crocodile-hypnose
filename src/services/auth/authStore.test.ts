@@ -105,7 +105,7 @@ describe('auth store', () => {
   it('deletes the account; signing in afterwards fails normally', async () => {
     const { client, store } = setup();
     await store.getState().signUp({ email: 'ann@example.com', password: 'secret12' });
-    await store.getState().deleteAccount();
+    await store.getState().deleteAccount('secret12');
     expect(store.getState()).toMatchObject({ status: 'signedOut', notice: 'accountDeleted' });
     expect(client.accounts.size).toBe(0);
     await expect(
@@ -113,11 +113,23 @@ describe('auth store', () => {
     ).rejects.toMatchObject({ code: 'invalid_credentials' });
   });
 
+  it('a wrong password deletes nothing and keeps you signed in', async () => {
+    const { client, store } = setup();
+    await store.getState().signUp({ email: 'ann@example.com', password: 'secret12' });
+    await expect(store.getState().deleteAccount('wrong-one')).rejects.toMatchObject({
+      code: 'invalid_credentials',
+    });
+    expect(store.getState()).toMatchObject({ status: 'signedIn', notice: null });
+    expect(client.accounts.size).toBe(1);
+  });
+
   it('a failed deletion keeps you signed in', async () => {
     const { client, store } = setup();
     await store.getState().signUp({ email: 'ann@example.com', password: 'secret12' });
     client.failNext(new AuthError('server_error', { status: 500 }));
-    await expect(store.getState().deleteAccount()).rejects.toMatchObject({ code: 'server_error' });
+    await expect(store.getState().deleteAccount('secret12')).rejects.toMatchObject({
+      code: 'server_error',
+    });
     expect(store.getState().status).toBe('signedIn');
     expect(client.accounts.size).toBe(1);
   });
@@ -126,7 +138,9 @@ describe('auth store', () => {
     const { client, store } = setup();
     await store.getState().signUp({ email: 'ann@example.com', password: 'secret12' });
     client.revokeAll();
-    await expect(store.getState().deleteAccount()).rejects.toMatchObject({ code: 'session_ended' });
+    await expect(store.getState().deleteAccount('secret12')).rejects.toMatchObject({
+      code: 'session_ended',
+    });
     expect(store.getState()).toMatchObject({ status: 'signedOut', notice: 'actionInterrupted' });
     expect(client.accounts.size).toBe(1);
   });

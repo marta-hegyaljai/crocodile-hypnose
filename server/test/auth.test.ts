@@ -550,8 +550,20 @@ describe('DELETE /me', () => {
   });
 
   test('requires a valid token', async () => {
-    const res = await ctx.app.inject({ method: 'DELETE', url: '/me' });
+    const res = await ctx.app.inject({ method: 'DELETE', url: '/me', payload: { password: 'x' } });
     assert.equal(res.statusCode, 401);
+  });
+
+  test('needs the password again: wrong or missing changes nothing', async () => {
+    const hyp = (await signUp(ctx)).json<AuthBody>();
+    const wrong = await me(ctx, hyp.tokens.accessToken, 'DELETE', 'not the password');
+    assert.equal(wrong.statusCode, 401);
+    assert.equal(wrong.json<ErrorJson>().error.code, 'invalid_credentials');
+    const missing = await me(ctx, hyp.tokens.accessToken, 'DELETE', null);
+    assert.equal(missing.statusCode, 400);
+    // The account and the session are untouched.
+    assert.equal((await me(ctx, hyp.tokens.accessToken)).statusCode, 200);
+    assert.equal((await me(ctx, hyp.tokens.accessToken, 'DELETE')).statusCode, 204);
   });
 });
 

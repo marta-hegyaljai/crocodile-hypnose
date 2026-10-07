@@ -19,3 +19,4 @@ export { Notice, type NoticeProps, type NoticeTone } from './Notice';
 export { moveFocus } from './moveFocus';
 export { Reveal, type RevealProps } from './Reveal';
 export { spaceActivates } from './webKeys';
+export { ToggleRow, type ToggleRowProps } from './ToggleRow';

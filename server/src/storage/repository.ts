@@ -169,6 +169,8 @@ export interface AccountRepository {
   ): Promise<EventRecord[]>;
   /** The stream's latest `limit` events, oldest first. */
   listEvents(userId: string, stream: string, limit: number): Promise<EventRecord[]>;
+  /** Removes every event of the stream. Resolves how many were removed. */
+  deleteEvents(userId: string, stream: string): Promise<number>;
 
   /** The user's whole points ledger. */
   listLedger(userId: string): Promise<LedgerRecord[]>;

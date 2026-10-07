@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { afterEach, beforeEach, describe, test } from 'node:test';
 
-import { makeApp, signIn, signUp, type AuthBody, type TestContext } from './helpers.ts';
+import { makeApp, PASSWORD, signIn, signUp, type AuthBody, type TestContext } from './helpers.ts';
 import { serverContent } from '../src/content.ts';
 import {
   BADGE_POINTS,
@@ -373,7 +373,12 @@ describe('dev hooks and limits', () => {
     await points();
     const userId = (await req('GET', '/me')).json<{ user: { id: string } }>().user.id;
     assert.ok((await ctx.repo.listLedger(userId)).length > 0);
-    await ctx.app.inject({ method: 'DELETE', url: '/me', headers: auth() });
+    await ctx.app.inject({
+      method: 'DELETE',
+      url: '/me',
+      headers: auth(),
+      payload: { password: PASSWORD },
+    });
     assert.equal((await ctx.repo.listLedger(userId)).length, 0);
   });
 });

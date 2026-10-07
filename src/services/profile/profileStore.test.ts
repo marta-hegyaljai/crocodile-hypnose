@@ -81,6 +81,44 @@ describe('profile store', () => {
     expect(profile.getState().settings.crocName).toBe('Zed');
   });
 
+  it('a settings change made before the server settings arrive keeps the server values', async () => {
+    const { auth, profile, client, storage } = setup();
+    await auth.getState().bootstrap();
+    const serverSettings = {
+      ...defaultSettings(500),
+      crocName: 'Zed',
+      moodConsent: true,
+      reminder: { enabled: true, time: '20:00', timeOfDay: 'evening' as const },
+      safety: { answers: [true, false, false], cautionMode: true },
+    };
+    client.seed('user-1', 'settings', serverSettings);
+    await auth.getState().signUp({ email: 'ann@example.com', password: 'secret12' });
+    // The device has the onboarding (ready at once) but no settings copy.
+    storage.data.set(
+      'mhp.hypnose.onboarding.v1.user-1',
+      JSON.stringify({ ...defaultOnboarding(400), step: 'done', completed: true }),
+    );
+    const hold = client.hold();
+    await profile.getState().load('user-1');
+    expect(profile.getState()).toMatchObject({ status: 'ready', settingsKnown: false });
+    // A tap on the defaults (the screens hide the controls meanwhile; this is the store's guard).
+    await profile.getState().updateSettings((d) => ({ ...d, sound: false }));
+    await profile.getState().setMoodConsent(false);
+    hold.release();
+    for (let i = 0; i < 8; i++) await flush();
+    expect(profile.getState().settingsKnown).toBe(true);
+    const expected = {
+      sound: false,
+      crocName: 'Zed',
+      moodConsent: true,
+      reminder: serverSettings.reminder,
+      safety: serverSettings.safety,
+    };
+    expect(profile.getState().settings).toMatchObject(expected);
+    expect(client.documents.get('user-1:settings')).toMatchObject(expected);
+    expect(client.calls.deleteMood).toBe(0);
+  });
+
   it('stays loading, with the error, while the server is unreachable on a new device', async () => {
     const { auth, profile, client } = setup();
     await auth.getState().bootstrap();
