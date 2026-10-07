@@ -1,3 +1,5 @@
+import { PartialPush } from '@/services/profile/documentStore';
+
 import {
   addToLog,
   confirmedLog,
@@ -90,6 +92,61 @@ describe('event log', () => {
         (err) => err === refused,
       ),
     ).rejects.toThrow('offline');
+  });
+
+  it('a rate limit in the middle of the fallback keeps what was learned (PartialPush)', async () => {
+    let doc = emptyLog<SessionCompletedEvent>();
+    for (let i = 1; i <= 6; i++) doc = addToLog(doc, event(`evt-0000000${i}`));
+    const refused = new Error('refused');
+    const limited = new Error('rate_limited');
+    const calls: string[][] = [];
+    const send = async (items: SessionCompletedEvent[]) => {
+      calls.push(items.map((e) => e.id));
+      if (items.length > 1) throw refused;
+      if (items[0]!.id === 'evt-00000002') throw refused;
+      if (items[0]!.id === 'evt-00000004') throw limited;
+      return items;
+    };
+    const error = await pushLog(doc, send, (err) => err === refused).catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(PartialPush);
+    const partial = (error as PartialPush<typeof doc>).partial;
+    expect((error as PartialPush<typeof doc>).reason).toBe(limited);
+    // 1 was stored, 2 was refused for good (settled); 3.. are still to send, nothing restarts.
+    expect(pendingOf(partial).map((e) => e.id)).toEqual([
+      'evt-00000004',
+      'evt-00000005',
+      'evt-00000006',
+    ]);
+    expect(Object.keys(partial.items)).toHaveLength(6);
+    calls.length = 0;
+    const done = await pushLog(partial, async (items) => {
+      calls.push(items.map((e) => e.id));
+      return items;
+    });
+    expect(calls).toEqual([['evt-00000004', 'evt-00000005', 'evt-00000006']]);
+    expect(pendingOf(done)).toEqual([]);
+  });
+
+  it('a failure before anything was learned is thrown as it is', async () => {
+    const doc = addToLog(emptyLog<SessionCompletedEvent>(), event('evt-00000001'));
+    const limited = new Error('rate_limited');
+    await expect(
+      pushLog(doc, async () => {
+        throw limited;
+      }),
+    ).rejects.toBe(limited);
+  });
+
+  it('keeps earlier batches when a later batch fails', async () => {
+    let doc = emptyLog<SessionCompletedEvent>();
+    for (let i = 0; i < 60; i++) doc = addToLog(doc, event(`evt-${String(i).padStart(8, '0')}`));
+    let n = 0;
+    const error = await pushLog(doc, async (items) => {
+      if (++n === 2) throw new Error('rate_limited');
+      return items;
+    }).catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(PartialPush);
+    expect(pendingOf((error as PartialPush<typeof doc>).partial)).toHaveLength(10);
   });
 
   it('validates stored logs and events', () => {

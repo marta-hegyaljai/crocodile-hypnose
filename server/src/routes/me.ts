@@ -8,6 +8,7 @@ import {
   moodConsentWithdrawn,
   PROGRESS_BODY_LIMIT,
   resolveDocument,
+  settingsAtVersion,
   withoutMoods,
   type DocumentKind,
 } from '../documents.ts';
@@ -40,8 +41,10 @@ export interface MeRouteOptions {
 }
 
 /** What the app sees of a stored document: the body it wrote, plus when the server stored it. */
-function wire(record: DocumentRecord | null) {
-  return record ? { ...record.data, storedAt: record.storedAt } : null;
+function wire(record: DocumentRecord | null, kind?: DocumentKind, version = 1) {
+  if (!record) return null;
+  const data = kind === 'settings' ? settingsAtVersion(record.data, version) : record.data;
+  return { ...data, storedAt: record.storedAt };
 }
 
 export async function meRoutes(
@@ -84,7 +87,9 @@ export async function meRoutes(
   for (const kind of DOCUMENT_KINDS) {
     app.get(`/me/${kind}`, async (req) => {
       const { user } = await service.authenticate(bearer(req));
-      return { [kind]: wire(await repo.getDocument(user.id, kind)) };
+      // Settings come in the version the app asks for (`?v=2`); an app that does not say gets v1.
+      const asked = Number((req.query as { v?: string }).v) === 2 ? 2 : 1;
+      return { [kind]: wire(await repo.getDocument(user.id, kind), kind, asked) };
     });
 
     app.put<{ Body: Record<string, unknown> & { version: number; updatedAt: number } }>(
@@ -117,7 +122,12 @@ export async function meRoutes(
           consentBefore = current ? current.data.moodConsent === true : null;
           const resolved = resolveDocument(kind as DocumentKind, current?.data ?? null, data);
           return resolved
-            ? { ...incoming, updatedAt: Number(resolved.updatedAt), data: resolved }
+            ? {
+                ...incoming,
+                version: Number(resolved.version),
+                updatedAt: Number(resolved.updatedAt),
+                data: resolved,
+              }
             : null;
         });
         // Consent withdrawn by this write: whatever mood data is still stored goes with it, even
@@ -126,7 +136,8 @@ export async function meRoutes(
         if (kind === 'settings' && consentBefore !== false && moodConsentWithdrawn(stored.data)) {
           await purgeMood(user.id);
         }
-        return { [kind]: wire(stored) };
+        // The answer is in the version the app sent.
+        return { [kind]: wire(stored, kind as DocumentKind, req.body.version) };
       },
     );
   }
@@ -157,7 +168,7 @@ export async function meRoutes(
     const { user } = await service.authenticate(bearer(req));
     const documents: Record<string, unknown> = {};
     for (const kind of DOCUMENT_KINDS) {
-      documents[kind] = wire(await repo.getDocument(user.id, kind));
+      documents[kind] = wire(await repo.getDocument(user.id, kind), kind, 2);
     }
     const stream = async (name: (typeof EVENT_STREAMS)[number]) =>
       (await repo.listEvents(user.id, name, MAX_EVENTS_PER_STREAM)).map(wireEvent);

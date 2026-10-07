@@ -3,7 +3,8 @@
  * onboarding state and settings. Each is a whole JSON document with a schema `version` and the
  * client's `updatedAt` (epoch ms); the newer write wins, locally and on the server.
  *
- * The shapes mirror the server's schemas in `server/src/documents.ts` (v1).
+ * The shapes mirror the server's schemas in `server/src/documents.ts` (settings are v2; v1 is
+ * still read and upgraded, see `upgradeSettings`).
  */
 
 export const GOALS = ['sleep', 'stress', 'confidence', 'focus', 'habits'] as const;
@@ -60,7 +61,7 @@ export interface OnboardingDoc extends SyncedDocument {
 }
 
 export interface SettingsDoc extends SyncedDocument {
-  version: 1;
+  version: 2;
   crocName: string | null;
   goals: Goal[];
   experience: Experience | null;
@@ -70,12 +71,19 @@ export interface SettingsDoc extends SyncedDocument {
   safety: { answers: SafetyAnswers; cautionMode: boolean };
   sound: boolean;
   haptics: boolean;
-  /** Reduced-motion override: true reduces, false forces full motion, null/absent follows the device. */
+  /** Reduced-motion override: true reduces, false forces full motion, null follows the device. */
+  reducedMotion: boolean | null;
+  /** When each field was last changed, and the `updatedAt` these stamps belong to (see `mergeSettings`). */
+  fieldsAt: SettingsStamps;
+}
+
+/**
+ * Settings v1, as an older app wrote them (and as old device copies hold them): `reducedMotion`
+ * and `fieldsAt` were optional. Read and upgraded to v2 by `upgradeSettings`.
+ */
+export interface SettingsDocV1 extends Omit<SettingsDoc, 'version' | 'reducedMotion' | 'fieldsAt'> {
+  version: 1;
   reducedMotion?: boolean | null;
-  /**
-   * When each field was last changed, and the `updatedAt` these stamps belong to (see
-   * `mergeSettings`). Absent in a document from an older app version.
-   */
   fieldsAt?: SettingsStamps;
 }
 
@@ -121,7 +129,7 @@ export function defaultOnboarding(updatedAt = 0): OnboardingDoc {
 
 export function defaultSettings(updatedAt = 0): SettingsDoc {
   return {
-    version: 1,
+    version: 2,
     updatedAt,
     crocName: null,
     goals: [],
@@ -135,6 +143,14 @@ export function defaultSettings(updatedAt = 0): SettingsDoc {
     },
     sound: true,
     haptics: true,
+    reducedMotion: null,
+    fieldsAt: {
+      doc: updatedAt,
+      ...(Object.fromEntries(SETTINGS_FIELDS.map((f) => [f, updatedAt])) as Record<
+        SettingsField,
+        number
+      >),
+    },
   };
 }
 
@@ -185,8 +201,8 @@ export function isOnboardingDoc(value: unknown): value is OnboardingDoc {
   );
 }
 
-export function isSettingsDoc(value: unknown): value is SettingsDoc {
-  if (!isRecord(value) || value.version !== 1) return false;
+/** The fields v1 and v2 share. */
+function hasSettingsBody(value: Record<string, unknown>): boolean {
   const reminder = value.reminder;
   const safety = value.safety;
   return (
@@ -205,10 +221,35 @@ export function isSettingsDoc(value: unknown): value is SettingsDoc {
     isAnswers(safety.answers) &&
     isBool(safety.cautionMode) &&
     isBool(value.sound) &&
-    isBool(value.haptics) &&
+    isBool(value.haptics)
+  );
+}
+
+/** Structural check of a settings document in the current version (v2). */
+export function isSettingsDoc(value: unknown): value is SettingsDoc {
+  return (
+    isRecord(value) &&
+    value.version === 2 &&
+    hasSettingsBody(value) &&
+    isNullableBool(value.reducedMotion) &&
+    isStamps(value.fieldsAt)
+  );
+}
+
+/** Structural check of a settings document as an older app (v1) wrote it. */
+export function isSettingsDocV1(value: unknown): value is SettingsDocV1 {
+  return (
+    isRecord(value) &&
+    value.version === 1 &&
+    hasSettingsBody(value) &&
     (value.reducedMotion === undefined || isNullableBool(value.reducedMotion)) &&
     (value.fieldsAt === undefined || isStamps(value.fieldsAt))
   );
+}
+
+/** A stored or received settings document of any version this app reads (upgrade it to use it). */
+export function isAnySettingsDoc(value: unknown): value is SettingsDoc | SettingsDocV1 {
+  return isSettingsDoc(value) || isSettingsDocV1(value);
 }
 
 const isStamps = (v: unknown): v is SettingsStamps =>

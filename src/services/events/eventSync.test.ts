@@ -95,4 +95,65 @@ describe('session events sync', () => {
     expect(Object.keys(tabA.getState().sessions.items)).toEqual(['evt-00000001', 'evt-00000002']);
     expect(Object.keys(tabB.getState().sessions.items)).toEqual(['evt-00000001', 'evt-00000002']);
   });
+
+  it('a rate limit in the middle of the one-by-one fallback keeps what was learned', async () => {
+    const { device, server, client } = await setup();
+    const phone = device();
+    await phone.getState().load('user-1', { fresh: true });
+    const real = client.appendEvents.bind(client);
+    const bad = 'evt-00000002';
+    let limitOnce = true;
+    const sizes: number[] = [];
+    client.appendEvents = (async (stream: never, items: SessionCompletedEvent[], token: string) => {
+      sizes.push(items.length);
+      if (items.some((e) => e.id === bad)) throw new AuthError('invalid_request', { status: 400 });
+      if (limitOnce && items.some((e) => e.id === 'evt-00000003')) {
+        limitOnce = false;
+        throw new AuthError('rate_limited', { status: 429, retryAfterSeconds: 60 });
+      }
+      return real(stream, items as never, token);
+    }) as never;
+    client.failAll(new AuthError('offline'));
+    for (const n of [1, 2, 3, 4]) {
+      await phone.getState().recordSession(event(`evt-0000000${n}`, { stopId: `intro-${n}` }));
+    }
+    await flush();
+    client.failAll(null);
+    await phone.getState().flush();
+    await flush();
+    // The batch was refused, evt-1 was stored, evt-2 refused for good, evt-3 hit the rate limit.
+    expect(server().map((e) => e.id)).toEqual(['evt-00000001']);
+    expect(pendingOf(phone.getState().sessions).map((e) => e.id)).toEqual([
+      'evt-00000003',
+      'evt-00000004',
+    ]);
+    expect((phone.getState().syncError as AuthError).code).toBe('rate_limited');
+    // The next attempt does not start over: only the two pending events are sent, in one request.
+    sizes.length = 0;
+    await phone.getState().flush();
+    await flush();
+    expect(sizes).toEqual([2]);
+    expect(server().map((e) => e.id)).toEqual(['evt-00000001', 'evt-00000003', 'evt-00000004']);
+    expect(pendingOf(phone.getState().sessions)).toEqual([]);
+    await phone.getState().reset();
+  });
+
+  it('an error that is not an explicit refusal never settles events for good', async () => {
+    const { device, server, client } = await setup();
+    const phone = device();
+    await phone.getState().load('user-1', { fresh: true });
+    client.failAll(new AuthError('unknown', { status: 409 }));
+    await phone.getState().recordSession(event('evt-00000001'));
+    await flush();
+    client.failAll(null);
+    expect(pendingOf(phone.getState().sessions)).toHaveLength(1);
+    // The profile store accepts a later change (rejected is cleared by a new write).
+    await phone.getState().recordSession(event('evt-00000002', { stopId: 'intro-3' }));
+    await flush();
+    expect(
+      server()
+        .map((e) => e.id)
+        .sort(),
+    ).toEqual(['evt-00000001', 'evt-00000002']);
+  });
 });

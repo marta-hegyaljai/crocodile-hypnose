@@ -71,6 +71,10 @@ export type AuthErrorCode =
   /** The refresh token was refused: the session is over and the user must sign in again. */
   | 'session_ended'
   | 'rate_limited'
+  /** Buying a decoration: not enough points. */
+  | 'insufficient_points'
+  /** Buying a decoration: it is not unlocked yet. */
+  | 'locked'
   /** The device has no network connection. */
   | 'offline'
   /** The server could not be reached or did not answer in time. */

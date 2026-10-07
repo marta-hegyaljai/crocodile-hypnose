@@ -1,3 +1,5 @@
+import { PartialPush } from '@/services/profile/documentStore';
+
 import type { Logged, EventLogDoc } from './types';
 
 /**
@@ -95,6 +97,10 @@ export function settleRefused<T>(doc: EventLogDoc<T>, ids: ReadonlySet<string>):
  * When the server refuses a batch (`isRefused`: the events themselves, not the connection), the
  * batch is sent again one event at a time and only the events refused on their own are dropped,
  * so one bad event never stops the rest of the stream from syncing.
+ *
+ * Any other failure (a rate limit, the connection) stops the push, and is thrown as a
+ * `PartialPush` when something was learned first: the batches the server stored and the events it
+ * refused. The retry then starts from there instead of sending everything again.
  */
 export async function pushLog<T extends { id: string }>(
   doc: EventLogDoc<T>,
@@ -104,21 +110,27 @@ export async function pushLog<T extends { id: string }>(
   const pending = pendingOf(doc);
   let result = doc;
   const refused = new Set<string>();
-  for (let i = 0; i < pending.length; i += EVENTS_PER_REQUEST) {
-    const batch = pending.slice(i, i + EVENTS_PER_REQUEST);
-    try {
-      result = mergeLogs(result, confirmedLog(await send(batch)));
-    } catch (err) {
-      if (!isRefused(err)) throw err;
-      for (const item of batch) {
-        try {
-          result = mergeLogs(result, confirmedLog(await send([item])));
-        } catch (one) {
-          if (!isRefused(one)) throw one;
-          refused.add(item.id);
+  try {
+    for (let i = 0; i < pending.length; i += EVENTS_PER_REQUEST) {
+      const batch = pending.slice(i, i + EVENTS_PER_REQUEST);
+      try {
+        result = mergeLogs(result, confirmedLog(await send(batch)));
+      } catch (err) {
+        if (!isRefused(err)) throw err;
+        for (const item of batch) {
+          try {
+            result = mergeLogs(result, confirmedLog(await send([item])));
+          } catch (one) {
+            if (!isRefused(one)) throw one;
+            refused.add(item.id);
+          }
         }
       }
     }
+  } catch (err) {
+    const learned = settleRefused(result, refused);
+    if (learned === doc) throw err;
+    throw new PartialPush(err, learned);
   }
   return settleRefused(result, refused);
 }

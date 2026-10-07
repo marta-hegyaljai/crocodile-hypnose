@@ -41,6 +41,7 @@ export default defineConfig({
         CORS_ORIGINS: `http://localhost:${PORT},http://127.0.0.1:${PORT}`,
         AUTH_RATE_LIMIT_MAX: '1000',
         REFRESH_RATE_LIMIT_MAX: '1000',
+        READ_RATE_LIMIT_MAX: '1000',
         RESET_LINK_BASE: `http://localhost:${PORT}/reset-password`,
         LOG_LEVEL: 'info',
         JWT_SECRET: 'e2e-only-secret-e2e-only-secret-e2e',

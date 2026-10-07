@@ -58,8 +58,10 @@ export function createHttpGamificationClient(options: JsonRequestOptions): Gamif
           await request('POST', '/me/habitat/purchases', { body: { itemId }, accessToken }),
         );
       } catch (err) {
+        // By the server's error code, never by its wording.
         if (err instanceof AuthError && err.status === 409) {
-          throw new PurchaseRefused(/unlock/i.test(err.message) ? 'locked' : 'insufficient');
+          if (err.code === 'locked') throw new PurchaseRefused('locked');
+          if (err.code === 'insufficient_points') throw new PurchaseRefused('insufficient');
         }
         throw err;
       }

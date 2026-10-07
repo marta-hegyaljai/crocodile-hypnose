@@ -1,13 +1,14 @@
 import { AuthError } from '@/services/auth/types';
 import { memoryStorage, sharedStorage } from '@/test/fakeAuth';
 
-import { createDocumentStore, newerOf } from './documentStore';
+import { createDocumentStore, newerOf, PartialPush } from './documentStore';
 import { mergeOnboarding } from './mergeOnboarding';
-import { mergeSettings, settingsStamps, stampSettings } from './mergeSettings';
+import { mergeSettings, settingsStamps, stampSettings, upgradeSettings } from './mergeSettings';
 import {
   defaultOnboarding,
   defaultSettings,
   isOnboardingDoc,
+  isAnySettingsDoc,
   isSettingsDoc,
   SETTINGS_FIELDS,
   type OnboardingDoc,
@@ -407,5 +408,175 @@ describe('document store', () => {
     const sound = !defaultSettings().sound;
     expect(store.getState().doc).toMatchObject({ sound, crocName: 'Zed' });
     expect(stored).toMatchObject({ sound, crocName: 'Zed', updatedAt: serverNow });
+  });
+});
+
+describe('document store: coming back to the app', () => {
+  it('refetch takes in what another device did meanwhile, and is quiet when offline', async () => {
+    const { store, server } = setup();
+    await store.getState().load('u1');
+    await flush();
+    expect(store.getState().doc.step).toBe('goals');
+    server.doc = { ...defaultOnboarding(5_000_000), step: 'done', completed: true };
+    await store.getState().refetch();
+    expect(store.getState().doc).toMatchObject({ step: 'done', completed: true });
+    expect(store.getState().dirty).toBe(false);
+
+    server.fail = new AuthError('offline');
+    server.doc = {
+      ...defaultOnboarding(6_000_000),
+      step: 'done',
+      completed: true,
+      crocName: 'Zed',
+    };
+    await store.getState().refetch();
+    expect(store.getState().syncError).toBeNull();
+    expect(store.getState().doc.crocName).toBeNull();
+    server.fail = null;
+    await store.getState().refetch();
+    expect(store.getState().doc.crocName).toBe('Zed');
+  });
+
+  it('refetch before the first read succeeded asks that read again instead', async () => {
+    const server = {
+      doc: finished(5_000_000) as OnboardingDoc | null,
+      fail: new AuthError('unreachable') as AuthError | null,
+      puts: [] as OnboardingDoc[],
+    };
+    const { store } = setup(memoryStorage(), server);
+    await store.getState().load('u1');
+    await flush();
+    expect(store.getState().serverKnown).toBe(false);
+    server.fail = null;
+    await store.getState().refetch();
+    expect(store.getState()).toMatchObject({ serverKnown: true, source: 'server' });
+  });
+
+  it('refetch keeps a local change the server has not seen, and pushes it', async () => {
+    const { store, server, clock } = setup();
+    await store.getState().load('u1');
+    await flush();
+    server.fail = new AuthError('offline');
+    clock.advance(10);
+    await store.getState().update((d) => ({ ...d, goals: ['focus'] }));
+    server.fail = null;
+    await store.getState().refetch();
+    await flush();
+    expect(server.doc?.goals).toEqual(['focus']);
+    expect(store.getState().dirty).toBe(false);
+  });
+});
+
+describe('document store: a read in flight when the user changes', () => {
+  it('the next user\'s first read is its own, not the previous user\'s refetch', async () => {
+    const asked: string[] = [];
+    const gates: (() => void)[] = [];
+    let hold = false;
+    const store = createDocumentStore<OnboardingDoc>({
+      key: 'test.onboarding',
+      storage: memoryStorage(),
+      defaults: () => defaultOnboarding(),
+      validate: isOnboardingDoc,
+      fetch: async (user) => {
+        asked.push(user);
+        if (hold) await new Promise<void>((r) => gates.push(r));
+        return finished(5_000_000);
+      },
+      push: async (_user, doc) => doc,
+      merge: mergeOnboarding,
+      now: () => 1_000_000,
+      debounceMs: 0,
+      retryMs: { first: 5, max: 20 },
+    });
+    await store.getState().load('A');
+    await flush();
+    expect(store.getState().serverKnown).toBe(true);
+    hold = true;
+    const refetching = store.getState().refetch();
+    await flush();
+    hold = false;
+    await store.getState().load('B');
+    gates.forEach((release) => release());
+    await refetching;
+    await flush();
+    expect(asked).toEqual(['A', 'A', 'B']);
+    expect(store.getState()).toMatchObject({ userId: 'B', serverKnown: true, source: 'server' });
+  });
+});
+
+describe('document store: partial pushes and rate limits', () => {
+  const logStore = (push: (doc: OnboardingDoc) => Promise<OnboardingDoc>) =>
+    createDocumentStore<OnboardingDoc>({
+      key: 'test.partial',
+      storage: memoryStorage(),
+      defaults: () => defaultOnboarding(),
+      validate: isOnboardingDoc,
+      fetch: async () => null,
+      push: (_user, doc) => push(doc),
+      merge: mergeOnboarding,
+      now: () => 1_000_000,
+      debounceMs: 0,
+      retryMs: { first: 5, max: 20 },
+    });
+
+  it('keeps what a failed push confirmed and tries again after the rate limit says so', async () => {
+    jest.useFakeTimers();
+    try {
+      let calls = 0;
+      const store = logStore(async (doc) => {
+        calls += 1;
+        if (calls === 1) {
+          throw new PartialPush(
+            new AuthError('rate_limited', { status: 429, retryAfterSeconds: 3 }),
+            {
+              ...doc,
+              crocName: 'kept',
+            },
+          );
+        }
+        return doc;
+      });
+      await store.getState().load('u1', { fresh: true });
+      await store.getState().update((d) => ({ ...d, step: 'consent' }));
+      await jest.advanceTimersByTimeAsync(10);
+      expect(calls).toBe(1);
+      // What the push learned is kept, the failure is the rate limit, and the write stays pending.
+      expect(store.getState().doc.crocName).toBe('kept');
+      expect(store.getState()).toMatchObject({ dirty: true, rejected: false });
+      expect((store.getState().syncError as AuthError).code).toBe('rate_limited');
+      // Nothing hammers the server meanwhile ...
+      await jest.advanceTimersByTimeAsync(2_000);
+      expect(calls).toBe(1);
+      // ... and it is retried once the wait is over.
+      await jest.advanceTimersByTimeAsync(1_500);
+      expect(calls).toBe(2);
+      expect(store.getState().dirty).toBe(false);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+});
+
+describe('document store: older document versions', () => {
+  it('reads a v1 settings copy from the device and upgrades it', async () => {
+    const storage = memoryStorage();
+    const { fieldsAt: _f, reducedMotion: _r, ...rest } = { ...defaultSettings(500), sound: false };
+    storage.data.set('test.settings.u1', JSON.stringify({ ...rest, version: 1 }));
+    const store = createDocumentStore<SettingsDoc>({
+      key: 'test.settings',
+      storage,
+      defaults: () => defaultSettings(),
+      validate: (v): v is SettingsDoc => isAnySettingsDoc(v),
+      upgrade: upgradeSettings,
+      fetch: async () => null,
+      push: async (_user, doc) => doc,
+      merge: mergeSettings,
+      stamp: stampSettings,
+      debounceMs: 0,
+    });
+    await store.getState().load('u1', { fresh: true });
+    expect(store.getState().doc).toMatchObject({ version: 2, sound: false, reducedMotion: null });
+    expect(isSettingsDoc(store.getState().doc)).toBe(true);
+    expect(store.getState().doc.fieldsAt.reducedMotion).toBe(0);
   });
 });
