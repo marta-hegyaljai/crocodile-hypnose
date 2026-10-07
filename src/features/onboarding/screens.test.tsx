@@ -320,6 +320,7 @@ describe('consent', () => {
 });
 
 describe('hatch', () => {
+  // Waits on the real hatch timer, so it gets more than jest's 5 s default under load.
   it('hatches on the third tap, with feedback, then needs a name', async () => {
     await set(answeredUpTo('hatch'));
     await set((d) => ({ ...d, crocHatched: false, crocName: null }));
@@ -372,7 +373,7 @@ describe('hatch', () => {
     expect(doc().crocName).toBe('Zé 🐊');
     expect(profile.getState().settings.crocName).toBe('Zé 🐊');
     expect(mockRouter.push).toHaveBeenCalledWith('/onboarding/first-session');
-  });
+  }, 20_000);
 
   it('revisited after hatching, the hatchling and the name are simply there', async () => {
     await set(answeredUpTo('firstSession'));
