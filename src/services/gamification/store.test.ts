@@ -7,14 +7,16 @@ import { createFakeAuthClient, memoryStorage } from '@/test/fakeAuth';
 import { createFakeGamificationClient } from '@/test/fakeGamification';
 import { createFakeProfileClient } from '@/test/fakeProfile';
 
+import type { GamificationClient } from './client';
 import { createGamificationStore, placeIn, removeFrom } from './store';
+import type { PointsSummary } from './shared/rules';
 import { emptySlots } from './types';
 
 const flush = async () => {
   for (let i = 0; i < 10; i++) await new Promise((r) => setTimeout(r, 0));
 };
 
-async function setup() {
+async function setup(wrap: (client: GamificationClient) => GamificationClient = (c) => c) {
   const authClient = createFakeAuthClient();
   const session = createSessionManager({
     client: authClient,
@@ -28,7 +30,7 @@ async function setup() {
   const profile = createProfileStore({ client: profileClient, session, storage, debounceMs: 0 });
   const server = createFakeGamificationClient({ profile: profileClient });
   const store = createGamificationStore({
-    client: server,
+    client: wrap(server),
     session,
     storage,
     profile,
@@ -103,6 +105,79 @@ describe('gamification store', () => {
     await store.getState().stepWeeklyTarget(2);
     await flush();
     expect(server.goal?.weeklyTarget).toBe(5);
+  });
+
+  it('a points request still in flight for the previous user does not block the next user', async () => {
+    const pending: ((summary: PointsSummary) => void)[] = [];
+    let calls = 0;
+    const { store, server } = await setup((client) => ({
+      ...client,
+      points: (token) => {
+        calls += 1;
+        // The first one after setup hangs (the previous user's); later ones answer at once.
+        if (calls === 2) return new Promise((resolve) => pending.push(resolve));
+        return client.points(token);
+      },
+    }));
+    expect(calls).toBe(1);
+    const stale = store.getState().refresh();
+    await flush();
+    expect(calls).toBe(2);
+    // Another user signs in while it is in flight.
+    server.addSeconds(600);
+    await store.getState().load('user-2', { fresh: true });
+    await flush();
+    expect(calls).toBe(3);
+    expect(store.getState().summaryKnown).toBe(true);
+    expect(store.getState().summary.calmSeconds).toBe(600);
+    // The previous user's late answer changes nothing.
+    pending[0]!({ ...store.getState().summary, calmSeconds: 99_999 });
+    await stale;
+    expect(store.getState().summary.calmSeconds).toBe(600);
+  });
+
+  it('a points read that started before a purchase cannot undo it', async () => {
+    let hold: ((summary: PointsSummary) => void) | null = null;
+    let calls = 0;
+    const { profile, store } = await setup((client) => ({
+      ...client,
+      points: (token) => {
+        calls += 1;
+        // The read started after the sessions are in (call 3) hangs until released.
+        if (calls === 3) {
+          return new Promise((resolve) => {
+            hold = resolve;
+          });
+        }
+        return client.points(token);
+      },
+    }));
+    await profile.getState().recordSession(session('evt-00000001', 'intro-1'));
+    await flush();
+    const before = store.getState().summary;
+    expect(before.balance).toBe(45);
+    const stale = store.getState().refetch();
+    await flush();
+    expect(hold).not.toBeNull();
+    expect(await store.getState().purchase('lilyPads')).toBe('ok');
+    hold!(before);
+    await stale;
+    expect(store.getState().summary.owned.map((o) => o.itemId)).toContain('lilyPads');
+    expect(store.getState().summary.balance).toBe(20);
+  });
+
+  it('refetch reads the points, the goal and the habitat again', async () => {
+    const { store, server } = await setup();
+    server.addSeconds(300);
+    server.habitat = {
+      version: 1,
+      updatedAt: Date.now() + 5000,
+      slots: placeIn(emptySlots(), 'lotus'),
+    };
+    await store.getState().refetch();
+    await flush();
+    expect(store.getState().summary.calmSeconds).toBe(300);
+    expect(store.getState().habitat.slots['water-left']).toBe('lotus');
   });
 
   it('the growth and week marks only move forward', async () => {

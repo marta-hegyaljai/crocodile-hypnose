@@ -27,6 +27,8 @@ const KNOWN_CODES: readonly AuthErrorCode[] = [
   'invalid_reset_token',
   'unauthorized',
   'rate_limited',
+  'insufficient_points',
+  'locked',
 ];
 
 export function webIsOffline(): boolean {

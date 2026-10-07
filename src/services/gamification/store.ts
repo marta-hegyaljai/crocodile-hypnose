@@ -62,6 +62,8 @@ export interface GamificationState {
   markWeekCelebrated(week: number): Promise<void>;
   /** Retries everything pending (back online, app active). */
   flush(): Promise<void>;
+  /** Reads the points, the goal and the habitat again (back in the app: another device may have moved on). */
+  refetch(): Promise<void>;
   reset(): Promise<void>;
 }
 
@@ -143,8 +145,11 @@ export function createGamificationStore({
     retryMs,
   });
   let generation = 0;
-  let refreshing: Promise<void> | null = null;
+  /** The points request in flight, and the user it is for (a switch must not reuse it). */
+  let refreshing: { promise: Promise<void>; generation: number } | null = null;
   let refreshTimer: ReturnType<typeof setTimeout> | null = null;
+  /** Bumped whenever the summary is replaced by a purchase: an older read must not undo it. */
+  let summaryVersion = 0;
 
   const cacheKey = (userId: string) => `${POINTS_KEY}.${userId}`;
 
@@ -232,12 +237,14 @@ export function createGamificationStore({
       refresh() {
         const { userId } = get();
         if (!userId) return Promise.resolve();
-        if (refreshing) return refreshing;
+        if (refreshing && refreshing.generation === generation) return refreshing.promise;
         const startedIn = generation;
-        refreshing = (async () => {
+        const version = summaryVersion;
+        const promise: Promise<void> = (async () => {
           try {
             const summary = await withToken((token) => client.points(token));
-            if (startedIn !== generation) return;
+            // A read that began before a purchase answers with the points from before it.
+            if (startedIn !== generation || version !== summaryVersion) return;
             set({ summary, summaryKnown: true });
             await storage.setItem(cacheKey(userId), JSON.stringify(summary)).catch(() => {});
           } catch (err) {
@@ -246,9 +253,10 @@ export function createGamificationStore({
             }
           }
         })().finally(() => {
-          refreshing = null;
+          if (refreshing?.promise === promise) refreshing = null;
         });
-        return refreshing;
+        refreshing = { promise, generation: startedIn };
+        return promise;
       },
 
       async purchase(itemId) {
@@ -259,6 +267,7 @@ export function createGamificationStore({
         try {
           const summary = await withToken((token) => client.purchase(itemId, token));
           if (startedIn !== generation) return 'error';
+          summaryVersion += 1;
           set({ summary, summaryKnown: true });
           await storage.setItem(cacheKey(userId), JSON.stringify(summary)).catch(() => {});
           return 'ok';
@@ -326,6 +335,15 @@ export function createGamificationStore({
 
       async flush() {
         await Promise.all([goal.getState().flush(), habitat.getState().flush(), get().refresh()]);
+      },
+
+      async refetch() {
+        if (!get().userId) return;
+        await Promise.all([
+          goal.getState().refetch(),
+          habitat.getState().refetch(),
+          get().refresh(),
+        ]);
       },
 
       async reset() {

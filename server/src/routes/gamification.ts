@@ -25,11 +25,13 @@ export interface GamificationRouteOptions {
   service: AuthService;
   now?: () => number;
   devHooks?: boolean;
+  /** Per client address on the two GETs that bring the ledger up to date (they take the write lock). */
+  readRateLimit?: { max: number; timeWindow: number };
 }
 
 /**
  * Points, habitat and (dev only) shortcuts:
- * - `GET /me/points`: the ledger brought up to date, as balance, calm time, badges, owned items
+ * - `GET /me/points`: (rate limited) the ledger brought up to date, as balance, calm time, badges, owned items
  *   and the latest entries.
  * - `POST /me/habitat/purchases {itemId}`: buys a decoration (idempotent, never below zero).
  * - `GET/PUT /me/habitat`: where the owned decorations are placed (last write wins).
@@ -37,11 +39,13 @@ export interface GamificationRouteOptions {
  */
 export async function gamificationRoutes(
   app: FastifyInstance,
-  { service, now = Date.now, devHooks = false }: GamificationRouteOptions,
+  { service, now = Date.now, devHooks = false, readRateLimit }: GamificationRouteOptions,
 ) {
   const repo = service.repo;
 
-  app.get('/me/points', async (req) => {
+  const limited = readRateLimit ? { config: { rateLimit: readRateLimit } } : {};
+
+  app.get('/me/points', limited, async (req) => {
     const { user } = await service.authenticate(bearer(req));
     return { points: pointsWire(await syncLedger(repo, user, now())) };
   });
@@ -69,7 +73,7 @@ export async function gamificationRoutes(
     return doc ? { ...doc.data, storedAt: doc.storedAt } : null;
   };
 
-  app.get('/me/habitat', async (req) => {
+  app.get('/me/habitat', limited, async (req) => {
     const { user } = await service.authenticate(bearer(req));
     const owned = pointsWire(await syncLedger(repo, user, now())).owned;
     return { habitat: await habitatWire(user.id), owned };

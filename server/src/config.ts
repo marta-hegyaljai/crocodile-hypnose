@@ -39,6 +39,8 @@ export interface ServerConfig {
   logLevel: string;
   /** Per client address, on the event streams (`POST /me/events`, `/me/mood`). */
   eventsRateLimit: { max: number; windowMs: number };
+  /** Per client address, on the reads that derive the points ledger (`GET /me/points`, `/me/habitat`). */
+  readRateLimit: { max: number; windowMs: number };
   /**
    * Dev and e2e only (DEV_HOOKS=1, never with NODE_ENV=production): routes under `/me/dev/` that
    * shortcut slow things, such as adding calm minutes to see the croc grow.
@@ -113,6 +115,10 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
     eventsRateLimit: {
       max: int(env, 'EVENTS_RATE_LIMIT_MAX', 300),
       windowMs: int(env, 'EVENTS_RATE_LIMIT_WINDOW_MS', 60_000),
+    },
+    readRateLimit: {
+      max: int(env, 'READ_RATE_LIMIT_MAX', 120),
+      windowMs: int(env, 'READ_RATE_LIMIT_WINDOW_MS', 60_000),
     },
     devHooks: !production && env.DEV_HOOKS === '1',
   };

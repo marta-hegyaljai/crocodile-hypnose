@@ -40,7 +40,7 @@
 | 4 | Review r1 #4 | Caution mode: Replay offered for finished unsuitable stops; decide with the owner's caution-mode decision (S08). |
 | 4 | QA r1 m5/m6 | No zone-complete moment; coming-soon goal falls back to Intro with no explanation; tapping coming-soon zones gives no feedback. |
 | 4 | QA r1 m7 | Web cold reload offline needs a service worker. |
-| 4 | QA r1 m8 | Stale tab/device doesn't refresh progress until reload (refetch on focus/visibility). |
+| 4 | QA r1 m8 | ~~Stale tab/device doesn't refresh progress until reload (refetch on focus/visibility).~~ Done in S09a-rel: every document, the event logs and the points are read again when the app becomes active, the tab becomes visible or the window regains focus (throttled to once a minute); a failed read is quiet, local changes are kept and pushed. |
 | 4 | QA r1 m11 | Keyboard: ~19 stop nodes before the tabs; sheet backdrop is a tab stop. |
 | 5 | Review r1 | Audio heard while JS is suspended (mobile web, locked screen) isn't counted as listened; count forward steps that match wall time. Confirm on iOS Safari. |
 | 5 | Review r1 | Another tab switching user mid-session: completion and resume point land on the new account. |
@@ -48,14 +48,15 @@
 | 5 | Review r1 | Keyboard focus on dimmed player controls doesn't reveal them. |
 | 6 | Review r1 | Stillness state not reset on pause/end; no native silence fallback to touch; route accepts any stop/game pairing; breathing guide ring at 10 Hz from JS; breathing hold has no screen-reader alternative; pause overlay doesn't trap focus; parseRecords doesn't validate best; no lifecycle/route tests. |
 | 3 | Review S06 | Flaky unit test: onboarding/screens.test.tsx "hatches on the third tap" fails intermittently under full-suite load. |
-| 7 | Review r1 | eventLog per-event fallback restarts after a 429 mid-way (sync can stall under the limit); `isRefused` treats "unknown" 4xx as permanent. |
-| 7 | Review r1 | GET /me/points and /me/habitat have no rate limit and re-derive the ledger under a write lock (~38 ms per call). |
-| 7 | Review r1 | Points refresh in flight for the previous user blocks the new user's first fetch after a sign-in switch. Purchase refusal matched by message text instead of error code. |
+| 7 | Review r1 | ~~eventLog per-event fallback restarts after a 429 mid-way (sync can stall under the limit); `isRefused` treats "unknown" 4xx as permanent.~~ Done in S09a-rel: a failed push keeps what it learned (`PartialPush`: stored batches and events refused on their own), a 429 waits for `Retry-After` before the next try, and only `invalid_request` settles an event for good. |
+| 7 | Review r1 | GET /me/points and /me/habitat have no rate limit and re-derive the ledger under a write lock (~38 ms per call). Rate limit: done in S09a-rel (`READ_RATE_LIMIT_MAX`, default 120 per minute per address). Deferred: skipping the derivation when nothing changed; the result also depends on the clock (week boundaries), the goal document and the content pack, so a watermark needs its own invalidation rules and tests (do it with the server's move to a real database, or if the bench shows a problem at the limit). |
+| 7 | Review r1 | ~~Points refresh in flight for the previous user blocks the new user's first fetch after a sign-in switch. Purchase refusal matched by message text instead of error code.~~ Done in S09a-rel: the in-flight read is tied to its user, a read that began before a purchase can no longer undo it, and refusals map from the server's `locked` / `insufficient_points` codes. |
 | 7 | QA r1 | Double-tap Continue on reward/growth moment lands on the Games tab. Weekly toast reappears after reload. Growth-moment sound autoplay console error on reload. Crafted game events add calm minutes (bounded by the daily cap). |
 | 7 | Fix r1 | Client pendingGains ignores the 14-day back-date window: a device offline > 14 days shows points the server won’t pay. |
 | 7 | Review r2 | A crafted client can reach days7/days30 and a couple of past weekly goals ~14 days early; >30 activities arriving on one UTC day lose the excess permanently. |
 | 8 | QA r1 | Consent off: no confirm, "deleted" note below the fold, says deleted while only queued offline. |
 | 8 | QA r1 | Reminder time: empty field gives no error. Email ellipsised in the header (matters before delete). |
 | 8 | QA r1 | Keyboard/SR: Tab continues into the inactive Home map; radio groups unnamed, no arrow keys; all section titles are h1; Escape doesn't close the delete confirmation. Export block is a small inner scroller. |
-| 8 | Review r1 | Older clients drop `reducedMotion` (needs settings v2 before release); ExportData not keyed on user; consent check vs purge interleave can leave one entry; no test for DELETE /me rate limit. |
-| 8 | Review r2 | If the app is killed between the consent-off write and scrubMoods, the local mood log survives the restart (server already purged); scrub on load when resolved consent is off with a stamp > 0. |
+| 8 | Review r1 | ~~Older clients drop `reducedMotion` (needs settings v2 before release);~~ Done in S09a-rel: settings v2 makes `reducedMotion` and `fieldsAt` required; the server stores v2, upgrades a v1 write or row, and answers v1 to an app that does not ask for `?v=2`; the app reads both and upgrades; ExportData not keyed on user; consent check vs purge interleave can leave one entry; no test for DELETE /me rate limit. |
+| 8 | Review r2 | ~~If the app is killed between the consent-off write and scrubMoods, the local mood log survives the restart (server already purged); scrub on load when resolved consent is off with a stamp > 0.~~ Done in S09a-rel (on load, and when the settings first become known). |
+| 9 | Rel review r1 | A points refresh arriving after a purchase can be folded into a discarded read; CORS does not expose Retry-After (web waits the 5 s default). |

@@ -9,9 +9,10 @@ import {
 } from '@/services/events/types';
 import { isProgressDoc, type ProgressDoc } from '@/services/progress/types';
 
+import { upgradeSettings } from './mergeSettings';
 import {
+  isAnySettingsDoc,
   isOnboardingDoc,
-  isSettingsDoc,
   stripServerFields,
   type DocumentKind,
   type OnboardingDoc,
@@ -65,9 +66,13 @@ const streamValidators: { [S in StreamKind]: (value: unknown) => value is Stream
 
 const validators: { [K in DocumentKind]: (value: unknown) => value is DocumentTypes[K] } = {
   onboarding: isOnboardingDoc,
-  settings: isSettingsDoc,
+  // A server that has not moved to v2 answers v1; `parse` upgrades it.
+  settings: (value): value is SettingsDoc => isAnySettingsDoc(value),
   progress: isProgressDoc,
 };
+
+/** Document versions this app asks for, where a kind has more than one (`?v=`). */
+const askedVersion: Partial<Record<DocumentKind, number>> = { settings: 2 };
 
 /** ProfileClient for the dev server in `server/`. */
 export function createHttpProfileClient(options: JsonRequestOptions): ProfileClient {
@@ -85,7 +90,7 @@ export function createHttpProfileClient(options: JsonRequestOptions): ProfileCli
       // than crash. The server keeps it; a newer app will read it.
       return null;
     }
-    return doc;
+    return (kind === 'settings' ? upgradeSettings(doc as SettingsDoc) : doc) as DocumentTypes[K];
   }
 
   function parseStream<S extends StreamKind>(stream: S, body: unknown): StreamTypes[S][] {
@@ -122,7 +127,8 @@ export function createHttpProfileClient(options: JsonRequestOptions): ProfileCli
       return parseStream(stream, body);
     },
     async get(kind, accessToken) {
-      const body = await request('GET', `/me/${kind}`, { accessToken });
+      const v = askedVersion[kind];
+      const body = await request('GET', `/me/${kind}${v ? `?v=${v}` : ''}`, { accessToken });
       return parse(kind, body);
     },
     async put(kind, doc, accessToken) {
