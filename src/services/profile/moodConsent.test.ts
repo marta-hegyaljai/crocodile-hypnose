@@ -230,6 +230,65 @@ describe('mood consent', () => {
     expect(Object.keys(tablet.getState().moods.items)).toEqual([]);
   });
 
+  it('a moods refetch that started before the withdrawal does not bring the moods back', async () => {
+    const { client, device } = await setup();
+    const phone = device();
+    await withConsent(phone);
+    const gate = client.hold();
+    const refetching = phone.getState().refetch();
+    await settle();
+    // The user withdraws while the read is out; it answers with the server's moods from before.
+    const withdrawing = phone.getState().setMoodConsent(false);
+    gate.release();
+    await Promise.all([refetching, withdrawing]);
+    await settle();
+    expect(phone.getState().settings.moodConsent).toBe(false);
+    expect(Object.keys(phone.getState().moods.items)).toEqual([]);
+    expect(phone.getState().onboarding.firstSession).toMatchObject({
+      moodBefore: null,
+      moodAfter: null,
+    });
+  });
+
+  it('a partial push that ends after the withdrawal does not bring the moods back', async () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const { client, device } = await setup();
+    const phone = device();
+    await phone.getState().load('user-1', { fresh: true });
+    await phone.getState().setMoodConsent(true);
+    await settle();
+    // More than one request's worth of entries, written while the server is out of reach.
+    client.failAll(new AuthError('offline'));
+    for (let i = 1; i <= 51; i++) {
+      await phone.getState().recordMood(mood(`mood-${String(i).padStart(7, '0')}`));
+    }
+    client.failAll(null);
+    // The first request goes through; the second waits, then hits the rate limit.
+    const append = client.appendEvents.bind(client);
+    let calls = 0;
+    let fail: () => void = () => undefined;
+    client.appendEvents = (async (...args: Parameters<typeof append>) => {
+      calls += 1;
+      if (calls === 1) return append(...args);
+      await new Promise<void>((r) => {
+        fail = r;
+      });
+      throw new AuthError('rate_limited', { status: 429, retryAfterSeconds: 1 });
+    }) as typeof client.appendEvents;
+    const pushing = phone.getState().flush();
+    await settle();
+    expect(calls).toBe(2);
+    const withdrawing = phone.getState().setMoodConsent(false);
+    await settle();
+    expect(Object.keys(phone.getState().moods.items)).toEqual([]);
+    fail();
+    await Promise.all([pushing, withdrawing]);
+    await settle();
+    expect(phone.getState().settings.moodConsent).toBe(false);
+    expect(Object.keys(phone.getState().moods.items)).toEqual([]);
+    warn.mockRestore();
+  });
+
   it('exports the stored data as JSON after sending pending changes', async () => {
     const { device } = await setup();
     const phone = device();

@@ -233,8 +233,10 @@ export function createProfileStore({
     /**
      * Mood data exists only while the user agrees (health data). When the settings' consent goes
      * from on to off, whatever mood data this device holds goes: after a withdrawal here, on
-     * another device or tab, or in a server copy that arrives late. Only on that change: the
-     * settings merge field by field, so an older copy that says off never gets here by itself.
+     * another device or tab, or in a server copy that arrives late. A decided withdrawal is
+     * enforced at every change, not only on the edge: a refetch that started before the
+     * withdrawal or a partial push merge can put moods back. The settings merge field by field,
+     * so an older copy that says off never gets here by itself. Idempotent.
      */
     const enforceMoodConsent = () => {
       const s = settings.getState();
@@ -245,9 +247,18 @@ export function createProfileStore({
       // From on to off; or the first time the choice is known and it is a withdrawal (not the
       // default): the app was closed between that write and the scrub, and the device still
       // holds the log. Checked on load too, once the mood log itself is in.
-      if (was === true || (was === null && withdrawn() && moods.getState().status === 'ready')) {
-        scrubMoods();
-      }
+      if (was === true || (withdrawn() && holdsMoods())) scrubMoods();
+    };
+    /** The mood log (once it is in) or the onboarding copy still holds mood data. */
+    const holdsMoods = () => {
+      const m = moods.getState();
+      if (m.status === 'ready' && Object.keys(m.doc.items).length > 0) return true;
+      const o = onboarding.getState().doc;
+      return (
+        o.firstSession.moodBefore !== null ||
+        o.firstSession.moodAfter !== null ||
+        o.moodConsent === true
+      );
     };
     /** The settings say the user withdrew mood consent (off, and decided at some point). */
     const withdrawn = () => {

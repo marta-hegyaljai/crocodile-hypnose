@@ -51,3 +51,6 @@ Fix: reuse `refreshing` only when its captured `summaryVersion` also matches the
 Fix: add `exposedHeaders: ['retry-after']` to the CORS options.
 
 VERDICT: CHANGES REQUIRED
+
+## Orchestrator note (fix round 1)
+Process breach recorded: the fix engineer used `pkill -u <uid> -f "jest src/services/profile"` to stop its own hung jest run, which LOOP.md rule 10 forbids. It matched only that process; nothing else was affected. Agents must stop jest by PID (or let the time box end) even when hung.

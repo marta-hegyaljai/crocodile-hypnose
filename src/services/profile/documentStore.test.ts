@@ -467,6 +467,43 @@ describe('document store: coming back to the app', () => {
   });
 });
 
+describe('document store: a read in flight when the user changes', () => {
+  it('the next user\'s first read is its own, not the previous user\'s refetch', async () => {
+    const asked: string[] = [];
+    const gates: (() => void)[] = [];
+    let hold = false;
+    const store = createDocumentStore<OnboardingDoc>({
+      key: 'test.onboarding',
+      storage: memoryStorage(),
+      defaults: () => defaultOnboarding(),
+      validate: isOnboardingDoc,
+      fetch: async (user) => {
+        asked.push(user);
+        if (hold) await new Promise<void>((r) => gates.push(r));
+        return finished(5_000_000);
+      },
+      push: async (_user, doc) => doc,
+      merge: mergeOnboarding,
+      now: () => 1_000_000,
+      debounceMs: 0,
+      retryMs: { first: 5, max: 20 },
+    });
+    await store.getState().load('A');
+    await flush();
+    expect(store.getState().serverKnown).toBe(true);
+    hold = true;
+    const refetching = store.getState().refetch();
+    await flush();
+    hold = false;
+    await store.getState().load('B');
+    gates.forEach((release) => release());
+    await refetching;
+    await flush();
+    expect(asked).toEqual(['A', 'A', 'B']);
+    expect(store.getState()).toMatchObject({ userId: 'B', serverKnown: true, source: 'server' });
+  });
+});
+
 describe('document store: partial pushes and rate limits', () => {
   const logStore = (push: (doc: OnboardingDoc) => Promise<OnboardingDoc>) =>
     createDocumentStore<OnboardingDoc>({

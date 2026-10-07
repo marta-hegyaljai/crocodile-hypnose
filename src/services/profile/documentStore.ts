@@ -160,7 +160,7 @@ export function createDocumentStore<T extends SyncedDocument>(
   // Bumped on every load/reset so late answers for another user (or a signed-out one) are dropped.
   let generation = 0;
   let pushing: Promise<void> | null = null;
-  let reading: Promise<void> | null = null;
+  let reading: { promise: Promise<void>; generation: number } | null = null;
   let unsubscribeStorage: (() => void) | null = null;
 
   const storageKey = (userId: string) => `${key}.${userId}`;
@@ -232,8 +232,8 @@ export function createDocumentStore<T extends SyncedDocument>(
     }
 
     function readServer(userId: string, startedIn: number): Promise<void> {
-      if (reading) return reading;
-      reading = (async () => {
+      if (reading && reading.generation === generation) return reading.promise;
+      const promise: Promise<void> = (async () => {
         let remote: T | null = null;
         try {
           remote = await fetch(userId);
@@ -258,9 +258,10 @@ export function createDocumentStore<T extends SyncedDocument>(
         else if (get().source === 'local') set({ dirty: true });
         if (get().dirty) await get().flush();
       })().finally(() => {
-        reading = null;
+        if (reading?.promise === promise) reading = null;
       });
-      return reading;
+      reading = { promise, generation };
+      return promise;
     }
 
     function followOtherTabs(userId: string, startedIn: number) {
@@ -319,9 +320,9 @@ export function createDocumentStore<T extends SyncedDocument>(
         if (!userId) return;
         // The first read has not succeeded yet: that is the read to retry (it merges the same way).
         if (!serverKnown) return get().flush();
-        if (reading) return reading;
+        if (reading && reading.generation === generation) return reading.promise;
         const startedIn = generation;
-        reading = (async () => {
+        const promise: Promise<void> = (async () => {
           let remote: T | null;
           try {
             remote = await fetch(userId);
@@ -332,9 +333,10 @@ export function createDocumentStore<T extends SyncedDocument>(
           await adopt(userId, remote, 'server');
           if (get().dirty) await get().flush();
         })().finally(() => {
-          reading = null;
+          if (reading?.promise === promise) reading = null;
         });
-        return reading;
+        reading = { promise, generation: startedIn };
+        return promise;
       },
 
       async update(change) {
