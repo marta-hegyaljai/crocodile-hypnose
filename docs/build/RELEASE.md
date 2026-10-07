@@ -23,7 +23,7 @@ Legend: VERIFIED = run for real, evidence given. BLOCKED = could not be tested o
 
 Worth doing, in this order:
 
-1. **M1 (MAJOR, QA r1):** caution mode: a stop after an unsuitable stop opens although earlier stops are locked (`src/content/journey.ts:47,98`). Small fix plus a test.
+1. ~~**M1 (MAJOR, QA r1):** caution mode: a stop after an unsuitable stop opens although earlier stops are locked.~~ Fixed in S09c (70b104e), re-checked in QA r2; lock hints now name the nearest finishable stop.
 2. Require `EXPO_PUBLIC_API_URL` for release exports (QA r1 m2): today a release build without it silently targets `http://localhost:4000` and `check-web-build.mjs release` does not catch it.
 3. Audio-failure notice overlaps the "Breathe in" cue (QA r1 m1).
 4. Native config to settle when the first device build is made: there is no `eas.json`; `app.json` lists no `expo-notifications` plugin entry and no explicit background-audio setting for iOS (`shouldPlayInBackground` is set in code, `UIBackgroundModes` must be confirmed in a real build). Expo config plugins and permission strings (notifications, motion) need a device pass.
@@ -48,7 +48,7 @@ Worth doing, in this order:
 | Real content and media | Zones, stops, captions, trance scripts, audio, video and visuals are placeholders (generated tone/noise, sample clip, `[Caption N]`). The pack has 19 stops in 2 of 6 zones; the other 4 zones are "coming soon" |
 | All copy | 173 `// PLACEHOLDER` markers in `src/copy/en.ts` (tagline, goals question, safety questions and information, reward and growth titles, onboarding text, privacy text, section headings such as `[Decorations]` and `[TODAY]`). German structure is ready, text is not. Store screenshots show some of these and must be recaptured after copy lands |
 | Crisis contacts and safety information | `help.contacts` and the safety information are placeholders (`[Crisis line name 1]`, `[Phone number 1]`, "not a replacement for therapy"). Needs MHP's clinical and legal sign-off, per country. Do not ship before this |
-| Caution-mode semantics | Owner decision still open: what a "yes" on a safety question should do (hide unsuitable stops, ask a professional first, only advise?). Also affects Replay for finished unsuitable stops (backlog Step 4 #4) and zone completion counts. Current behaviour is the S04 rule plus the M1 bug |
+| Caution-mode semantics | Owner decision still open: what a "yes" on a safety question should do (hide unsuitable stops, ask a professional first, only advise?). Also affects Replay for finished unsuitable stops (backlog Step 4 #4) and zone completion counts. Current behaviour is the S04 rule (unsuitable stops are shown, can't be started, and don't block the way once reached) |
 | Dark splash | Owner decision: `userInterfaceStyle` is `light`, so there is no dark splash. To honour system dark mode add `dark: { backgroundColor: "#08171A" }` to the `expo-splash-screen` plugin with the same image |
 | Store accounts and submission | Apple Developer Program and Google Play Console accounts, bundle and package ids (`com.mhp.hypnose` is a placeholder), signing credentials, EAS project: not available |
 | Production backend | Postgres schema and deployment of the app API (SQLite in dev), real email for password reset (the dev server logs the link), monitoring |
