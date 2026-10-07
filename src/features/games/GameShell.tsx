@@ -30,6 +30,8 @@ export interface GameShellProps {
   Game: React.ComponentType<GameProps>;
   /** One line for the end card, e.g. "7 breaths". */
   resultLabel: (result: GameResult) => string;
+  /** What the play earned (points, a new scale), shown on the end card under the result. */
+  reward?: React.ReactNode;
   /** Called the moment a game is played through (never on a quit). */
   onGameCompleted: (result: GameResult) => void;
   /** The first time the user starts the game on this screen. */
@@ -58,6 +60,7 @@ function ShellBody({
   crocName,
   Game,
   resultLabel,
+  reward,
   onGameCompleted,
   onStarted,
   onLeave,
@@ -293,6 +296,7 @@ function ShellBody({
                   </Text>
                 </View>
               </View>
+              {reward}
               <Text variant="body" tone="secondary" testID="game-eyes-closed">
                 {t('games.shell.eyesClosed')}
               </Text>

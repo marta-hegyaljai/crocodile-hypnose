@@ -1,5 +1,12 @@
 import React, { useState } from 'react';
 import { StyleSheet, View, useWindowDimensions } from 'react-native';
+import Animated, {
+  Extrapolation,
+  interpolate,
+  useAnimatedScrollHandler,
+  useAnimatedStyle,
+  useSharedValue,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { t, type CopyKey } from '@/copy';
@@ -11,6 +18,7 @@ import {
   WEEKLY_TARGET_MAX,
   WEEKLY_TARGET_MIN,
   growthProgress,
+  placeIn,
   useGamification,
   usePoints,
   useWeeklyGoal,
@@ -35,13 +43,21 @@ const PURCHASE_MESSAGE: Record<Exclude<PurchaseResult, 'ok'>, CopyKey> = {
 /** Columns for a grid at this content width (cards at least ~150 wide). */
 const columnsFor = (width: number, min: number) => Math.max(2, Math.floor(width / min));
 
+/** The item that would leave the scene if this one were placed now (its slots are all taken). */
+function displacedBy(slots: Record<string, string | null>, itemId: string): string | null {
+  const next = placeIn(slots, itemId);
+  if (next === slots) return null;
+  const slot = Object.keys(next).find((k) => next[k] !== slots[k]);
+  return slot ? (slots[slot] ?? null) : null;
+}
+
 /**
  * The Croc tab: the croc's lagoon, which the user decorates with what they bought or unlocked,
  * the croc's growth towards its next stage, the weekly goal, and the collection of scales.
  */
 export function HabitatScreen() {
   const insets = useSafeAreaInsets();
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
   const feedback = useFeedback();
   const crocName = useProfile((s) => s.settings.crocName) ?? t('croc.defaultName');
   const pendingSeconds = useProfile((s) => pendingGains(s.sessions, appContentMeta).seconds);
@@ -56,6 +72,24 @@ export function HabitatScreen() {
 
   const contentWidth = Math.min(width, 720) - space.lg * 2;
   const sceneHeight = Math.round(Math.min(Math.max(contentWidth * 0.68, 230), 380));
+  // The scene stays in view while the list scrolls: it folds to a band with the croc's head and the
+  // water line, so buying or placing something is always seen happening.
+  const compactHeight = Math.round(Math.max(118, sceneHeight * (height < 760 ? 0.4 : 0.5)));
+  const collapse = Math.max(1, sceneHeight - compactHeight);
+  const scrollY = useSharedValue(0);
+  const onScroll = useAnimatedScrollHandler((e) => {
+    scrollY.value = e.contentOffset.y;
+  });
+  const sceneFrame = useAnimatedStyle(() => ({
+    height: interpolate(scrollY.value, [0, collapse], [sceneHeight, compactHeight], Extrapolation.CLAMP),
+  }));
+  const sceneShift = useAnimatedStyle(() => ({
+    transform: [
+      {
+        translateY: interpolate(scrollY.value, [0, collapse], [0, -collapse * 0.42], Extrapolation.CLAMP),
+      },
+    ],
+  }));
   const growth = growthProgress(summary.calmSeconds + pendingSeconds);
   const owned = new Set(summary.owned.map((o) => o.itemId));
   const earned = new Map(summary.badges.map((b) => [b.id, b.at]));
@@ -81,21 +115,30 @@ export function HabitatScreen() {
 
   const action = (item: DecorationDef) => {
     const name = itemName(item.id);
+    const swap = placed.has(item.id) ? null : displacedBy(slots, item.id);
+    const swapHint = swap ? (
+      <Text variant="caption" tone="secondary" align="center" numberOfLines={2} placeholder>
+        {t('gamification.habitat.willSwap', { item: itemName(swap) })}
+      </Text>
+    ) : null;
     if (owned.has(item.id)) {
       const isPlaced = placed.has(item.id);
       return (
-        <Button
-          label={isPlaced ? t('gamification.habitat.remove') : t('gamification.habitat.place')}
-          variant={isPlaced ? 'ghost' : 'secondary'}
-          size="sm"
-          fullWidth
-          onPress={() => {
-            feedback.haptic('select');
-            void (isPlaced ? actions.remove(item.id) : actions.place(item.id));
-          }}
-          accessibilityLabel={`${isPlaced ? t('gamification.habitat.remove') : t('gamification.habitat.place')}: ${name}`}
-          testID={`item-${item.id}-${isPlaced ? 'remove' : 'place'}`}
-        />
+        <View style={styles.action}>
+          <Button
+            label={isPlaced ? t('gamification.habitat.remove') : t('gamification.habitat.place')}
+            variant={isPlaced ? 'ghost' : 'secondary'}
+            size="sm"
+            fullWidth
+            onPress={() => {
+              feedback.haptic('select');
+              void (isPlaced ? actions.remove(item.id) : actions.place(item.id));
+            }}
+            accessibilityLabel={`${isPlaced ? t('gamification.habitat.remove') : t('gamification.habitat.place')}: ${name}`}
+            testID={`item-${item.id}-${isPlaced ? 'remove' : 'place'}`}
+          />
+          {swapHint}
+        </View>
       );
     }
     const lockedBy = item.requires && !earned.has(item.requires) ? item.requires : null;
@@ -108,27 +151,46 @@ export function HabitatScreen() {
     }
     const affordable = balance >= item.cost;
     return (
-      <Button
-        label={
-          item.cost === 0
-            ? t('gamification.habitat.unlockFree')
-            : t('gamification.habitat.buy', { n: item.cost })
-        }
-        size="sm"
-        icon={item.cost === 0 ? 'sparkle' : 'drop'}
-        fullWidth
-        disabled={!affordable || !!purchasing}
-        loading={purchasing === item.id}
-        onPress={() => void buy(item)}
-        accessibilityLabel={`${name}: ${t('gamification.habitat.buy', { n: item.cost })}`}
-        testID={`item-${item.id}-buy`}
-      />
+      <View style={styles.action}>
+        <Button
+          label={
+            item.cost === 0
+              ? t('gamification.habitat.unlockFree')
+              : t('gamification.habitat.buy', { n: item.cost })
+          }
+          size="sm"
+          icon={item.cost === 0 ? 'sparkle' : 'drop'}
+          fullWidth
+          disabled={!affordable || !!purchasing}
+          loading={purchasing === item.id}
+          onPress={() => void buy(item)}
+          accessibilityLabel={
+            affordable
+              ? `${name}: ${t('gamification.habitat.buy', { n: item.cost })}`
+              : `${name}: ${t('gamification.habitat.buy', { n: item.cost })}, ${t('gamification.habitat.morePoints', { n: item.cost - balance })}`
+          }
+          testID={`item-${item.id}-buy`}
+        />
+        {!affordable ? (
+          <Text
+            variant="caption"
+            tone="secondary"
+            align="center"
+            placeholder
+            testID={`item-${item.id}-missing`}
+          >
+            {t('gamification.habitat.morePoints', { n: item.cost - balance })}
+          </Text>
+        ) : affordable ? (
+          swapHint
+        ) : null}
+      </View>
     );
   };
 
   return (
-    <Screen padded={false} edges={[]} testID="croc-screen">
-      <View style={[styles.content, { paddingTop: insets.top + space.lg }]}>
+    <Screen padded={false} edges={[]} scroll={false} testID="croc-screen">
+      <View style={[styles.top, { paddingTop: insets.top + space.md }]}>
         <View style={styles.header}>
           <Text
             variant="title"
@@ -155,8 +217,8 @@ export function HabitatScreen() {
           />
         </View>
 
-        <View
-          style={[styles.scene, { height: sceneHeight }]}
+        <Animated.View
+          style={[styles.scene, sceneFrame]}
           accessible
           accessibilityRole="image"
           accessibilityLabel={t('gamification.habitat.a11yScene', {
@@ -164,17 +226,25 @@ export function HabitatScreen() {
             count: placed.size,
           })}
         >
-          <HabitatScene
-            width={contentWidth}
-            height={sceneHeight}
-            stage={growth.stage}
-            slots={slots}
-            crocName={crocName}
-            celebrate={celebrate}
-            testID="habitat-scene"
-          />
-        </View>
-
+          <Animated.View style={sceneShift}>
+            <HabitatScene
+              width={contentWidth}
+              height={sceneHeight}
+              stage={growth.stage}
+              slots={slots}
+              crocName={crocName}
+              celebrate={celebrate}
+              testID="habitat-scene"
+            />
+          </Animated.View>
+        </Animated.View>
+      </View>
+      <Animated.ScrollView
+        onScroll={onScroll}
+        scrollEventThrottle={16}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
         <Card padding="md" testID="habitat-growth">
           <View style={styles.rowBetween}>
             <Chip
@@ -314,14 +384,23 @@ export function HabitatScreen() {
             );
           })}
         </View>
-      </View>
+      </Animated.ScrollView>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
+  top: {
+    paddingHorizontal: space.lg,
+    paddingBottom: space.sm,
+    gap: space.sm,
+    width: '100%',
+    maxWidth: 720,
+    alignSelf: 'center',
+  },
   content: {
     paddingHorizontal: space.lg,
+    paddingTop: space.xs,
     paddingBottom: space.xxl,
     gap: space.md,
     width: '100%',
@@ -335,7 +414,9 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderWidth: 3,
     borderColor: palette.white,
+    backgroundColor: palette.shallows,
   },
+  action: { gap: space.xxs },
   rowBetween: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -17,9 +17,11 @@ import {
   type GameProps,
   type GameResult,
 } from '@/features/games';
+import { GameReward } from '@/features/habitat/RewardExtras';
 import { useJourney } from '@/features/home/useJourney';
 import { useAuth } from '@/services/auth';
 import { newEventId } from '@/services/events/types';
+import { GAME_POINTS } from '@/services/gamification';
 import { useProfile, useProfileStore } from '@/services/profile';
 import { markDone, markStarted } from '@/services/progress/mergeProgress';
 import { space } from '@/theme';
@@ -104,6 +106,7 @@ export default function GameScreen() {
       game={game}
       crocName={crocName}
       resultLabel={resultLabel}
+      reward={<GameReward points={GAME_POINTS} />}
       onStarted={onStarted}
       onGameCompleted={onGameCompleted}
       onLeave={back}

@@ -52,6 +52,7 @@ export function HomeHeader({ crocName }: { crocName: string }) {
         <Chip
           label={t('goal.progress', { done: Math.min(days, target), total: target })}
           tone={days >= target ? 'celebrate' : 'goal'}
+          icon={days >= target ? 'sparkle' : 'leaf'}
           accessibilityLabel={t('a11y.weeklyGoal', { done: days, total: target })}
           testID="home-weekly"
         />

@@ -504,6 +504,8 @@ export const en = {
       unlockBy: ph('Unlocked by: {badge}'), // PLACEHOLDER
       unlockFree: 'Claim',
       insufficient: ph('Not enough points yet.'), // PLACEHOLDER
+      morePoints: ph('{n} more points'), // PLACEHOLDER
+      willSwap: ph('Takes the place of {item}'), // PLACEHOLDER
       lockedError: ph('Not unlocked yet.'), // PLACEHOLDER
       offline: 'Buying needs a connection. Try again when you are online.',
       error: 'That did not work. Try again.',
@@ -527,6 +529,8 @@ export const en = {
       glowLotus: ph('Glowing lotus'), // PLACEHOLDER
       turtle: ph('Turtle'), // PLACEHOLDER
     },
+    newScale: ph('New scale: {name}'), // PLACEHOLDER
+    a11yNewScale: '{name} scale earned, {n} points',
     badges: {
       firstSession: ph('First session'), // PLACEHOLDER
       firstLongTrance: ph('First long trance'), // PLACEHOLDER

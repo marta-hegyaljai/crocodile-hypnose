@@ -8,6 +8,7 @@ import { t } from '@/copy';
 import { localContent } from '@/content/repository';
 import type { StopStatus } from '@/content/journey';
 import type { Stop } from '@/content/types';
+import { NewScales, useNewBadges } from '@/features/habitat/RewardExtras';
 import { effectiveCautionMode, useJourney } from '@/features/home/useJourney';
 import { LagoonSheetScreen } from '@/features/layout/LagoonSheetScreen';
 import { durationLabel, typeLabel } from '@/features/map/stopLabels';
@@ -72,6 +73,7 @@ export default function SessionScreen() {
   );
   const feedback = useFeedback();
   const crocStage = useGrowthStage();
+  const newBadges = useNewBadges();
   const layout = useNightLayout();
   const dive = useDive(layout.depth);
   const [phase, setPhase] = useState<Phase>('intro');
@@ -267,7 +269,13 @@ export default function SessionScreen() {
         crocOffsetY={hop.offset}
         splash={hop.splash}
         header={null}
-        sheet={<RewardSheet points={completion.points} onContinue={leave} />}
+        sheet={
+          <RewardSheet
+            points={completion.points}
+            extra={<NewScales badges={newBadges} />}
+            onContinue={leave}
+          />
+        }
         testID="session-reward-screen"
       />
     ) : null;

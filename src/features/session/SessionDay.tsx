@@ -173,9 +173,12 @@ export function useRewardHop(active: boolean) {
  */
 export function RewardSheet({
   points,
+  extra,
   onContinue,
 }: {
   points: PointsBreakdown;
+  /** More the session earned (a new scale), after the bonus. */
+  extra?: React.ReactNode;
   onContinue: () => void;
 }) {
   const { colors, shadow } = useTheme();
@@ -236,6 +239,11 @@ export function RewardSheet({
               </Text>
             </View>
           </View>
+        </Reveal>
+      ) : null}
+      {extra ? (
+        <Reveal offset={10} delay={stagger + REWARD.count * 0.75}>
+          {extra}
         </Reveal>
       ) : null}
       <Reveal offset={10} delay={stagger + REWARD.count * 0.6}>
