@@ -75,16 +75,25 @@ export function deriveJourney(
       const state = zoneState(zone);
       const stops: StopView[] = [];
       let previous: StopView | null = null;
+      // Whether the way is open past the previous stop: it is done, or it is a caution stop the
+      // user had reached (a caution stop doesn't block the way, but never opens it early).
+      let passable = true;
+      // The nearest earlier stop the user can actually finish: what a lock hint should point to.
+      let blocker: StopView | null = null;
       for (const stop of content.stopsOf(zone.id)) {
         const record = progress.stops[stop.id];
+        const reached: boolean =
+          stop.unlock === 'open' || previous === null || passable || !!record;
         let status: StopStatus;
         let lockReason: LockReason | null = null;
+        let opensWay = false;
         if (state === 'comingSoon') {
           status = 'locked';
           lockReason = { kind: 'comingSoon' };
         } else if (record?.status === 'done') {
           // Finished stays finished, whatever changed since (content order, caution mode).
           status = 'done';
+          opensWay = true;
         } else if (state === 'locked') {
           status = 'locked';
           lockReason = {
@@ -93,19 +102,20 @@ export function deriveJourney(
           };
         } else if (cautionMode && !stop.cautionSafe) {
           status = 'caution';
+          opensWay = reached;
         } else {
-          const reached =
-            stop.unlock === 'open' || previous === null || cleared(previous.status) || !!record;
           if (reached) status = record?.status === 'inProgress' ? 'inProgress' : 'available';
           else {
             status = 'locked';
-            lockReason = { kind: 'previous', stop: previous!.stop };
+            lockReason = { kind: 'previous', stop: (blocker ?? previous!).stop };
           }
         }
         const view: StopView = { stop, status, lockReason };
         stops.push(view);
         byStopId.set(stop.id, view);
         previous = view;
+        passable = opensWay;
+        if (status !== 'caution') blocker = view;
       }
       const done = stops.filter((s) => cleared(s.status)).length;
       views.set(zone.id, {

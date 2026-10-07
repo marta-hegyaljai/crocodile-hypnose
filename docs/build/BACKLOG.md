@@ -65,3 +65,5 @@
 | 9a | Engineer | Radio groups move focus with arrow keys but are not a roving tab stop (every radio stays in the tab order). Tab bar arrow keys (Step 1 QA m1) and focus after step changes (Step 3 QA m6) are untouched. |
 | 9 | UX review r1 | Pending reward kept after back navigation (old reward screen on next open within 15 min); pending-reward key not purged on account delete/local wipe; Stillness touch mode counts samples after the finger lifts; breathing `pressed` flag can swallow one SR activation after a drag-off (check VoiceOver on device). |
 | 9 | Rel review r1 | A points refresh arriving after a purchase can be folded into a discarded read; CORS does not expose Retry-After (web waits the 5 s default). |
+| 9 | Release QA r1 | Offline: "audio could not be loaded" notice overlaps the "Breathe in" cue at 390/360. Release export without EXPO_PUBLIC_API_URL silently targets localhost:4000 (make the release check require it). Placeholder media length differs from stated duration. |
+| 9 | Release QA r2 | ~~Locked-stop hint pointed to an unfinishable caution stop.~~ Done in S09c: hints name the nearest finishable stop. |

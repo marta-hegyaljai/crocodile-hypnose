@@ -111,6 +111,16 @@ describe('deriveJourney', () => {
     expect(journey(done(ids('intro', 6)), true).zones[0]!.stops[5]!.status).toBe('done');
   });
 
+  it('caution mode: an unsuitable stop never opens the way early', () => {
+    // Only intro-1 is done: intro-6 is unsuitable but not reached yet, so intro-7 stays locked.
+    const stops = journey(done(ids('intro', 1)), true).zones[0]!.stops;
+    expect(stops[1]!.status).toBe('available');
+    expect(stops[5]!.status).toBe('caution');
+    expect(stops[6]!.status).toBe('locked');
+    // The hint points to a stop the user can finish, not to the caution stop.
+    expect(stops[6]!.lockReason).toMatchObject({ kind: 'previous', stop: { id: 'intro-5' } });
+  });
+
   it('a zone that opens after another stays locked until that one is finished', () => {
     const pack: ContentPack = {
       version: 1,
