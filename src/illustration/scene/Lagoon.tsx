@@ -107,7 +107,7 @@ export function Lagoon({
   const crocLeft = Math.round(width * crocX - cw * ratio.focus);
 
   const bankFill = night ? '#0C2A22' : '#DDEBD2';
-  const bankEdge = night ? '#17493A' : palette.leaf;
+  const bankEdge = night ? palette.jungleNight : palette.leaf;
   const mud = night ? '#3A2A18' : palette.riverbankMud;
   const waterHeight = waterBottom - waterY;
   const roomy = waterHeight >= 150;
