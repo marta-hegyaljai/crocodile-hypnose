@@ -138,6 +138,13 @@ async function openProfile(page: Page) {
   await expect(page.getByTestId('profile-screen')).toBeVisible();
 }
 
+/** Profile, then Privacy: where account deletion lives. */
+async function openPrivacy(page: Page) {
+  await openProfile(page);
+  await page.getByTestId('profile-privacy-link').click();
+  await expect(page.getByTestId('privacy-screen')).toBeVisible();
+}
+
 test.describe('accounts', () => {
   test('sign up, reload, sign out, wrong password, sign in', async ({ page, request }, info) => {
     const errors = collectErrors(page);
@@ -302,13 +309,17 @@ test.describe('accounts', () => {
   }, info) => {
     const email = uniqueEmail(info, 'delete');
     await signUpAndFinish(page, request, email);
-    await openProfile(page);
+    await openPrivacy(page);
     await page.getByTestId('profile-delete-account').click();
     await expect(page.getByTestId('delete-confirm')).toBeVisible();
     await page.getByTestId('delete-cancel').click();
-    await expect(page.getByTestId('profile-sign-out')).toBeVisible();
-    await openProfile(page);
+    await expect(page.getByTestId('profile-delete-account')).toBeVisible();
     await page.getByTestId('profile-delete-account').click();
+    // The password again (recent authentication): wrong keeps the account, right deletes it.
+    await page.getByTestId('delete-password').fill('not the password');
+    await page.getByTestId('delete-confirm-button').click();
+    await expect(page.getByTestId('delete-error-message')).toContainText('not correct');
+    await page.getByTestId('delete-password').fill(PASSWORD);
     await page.getByTestId('delete-confirm-button').click();
     await expect(page.getByTestId('welcome-notice-message')).toHaveText(
       'Your account was deleted.',
@@ -387,8 +398,9 @@ test.describe('accounts', () => {
       }
       return route.continue();
     });
-    await openProfile(page);
+    await openPrivacy(page);
     await page.getByTestId('profile-delete-account').click();
+    await page.getByTestId('delete-password').fill(PASSWORD);
     await page.getByTestId('delete-confirm-button').click();
     await expect(page.getByTestId('welcome-notice-message')).toHaveText(
       'Your account was deleted.',
@@ -461,11 +473,16 @@ test.describe('accounts', () => {
   }, info) => {
     await signUpAndFinish(page, request, uniqueEmail(info, 'focus'));
     const active = () => page.evaluate(() => document.activeElement?.getAttribute('data-testid'));
-    await openProfile(page);
+    await openPrivacy(page);
     await page.getByTestId('profile-delete-account').focus();
     await page.keyboard.press('Enter');
     await expect.poll(active).toBe('delete-confirm-title');
+    // The password field comes first, then the safe choice.
     await page.keyboard.press('Tab');
+    await expect.poll(active).toBe('delete-password');
+    for (let i = 0; i < 3 && (await active()) !== 'delete-cancel'; i++) {
+      await page.keyboard.press('Tab');
+    }
     await expect.poll(active).toBe('delete-cancel');
     await page.keyboard.press('Enter');
     await expect.poll(active).toBe('profile-delete-account');

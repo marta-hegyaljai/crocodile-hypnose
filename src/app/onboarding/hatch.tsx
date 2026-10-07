@@ -19,8 +19,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { t } from '@/copy';
 import {
   CROC_NAME_MAX,
-  CROC_NAME_PROBLEM_COPY,
   checkCrocName,
+  crocNameProblemText,
   stepPosition,
 } from '@/features/onboarding/flow';
 import { HATCH_DURATION_MS, HATCH_TAPS, HatchingEgg } from '@/features/onboarding/HatchingEgg';
@@ -138,7 +138,7 @@ export default function HatchScreen() {
   const onContinue = () => {
     const result = checkCrocName(name);
     if (!result.ok) {
-      setNameError(t(CROC_NAME_PROBLEM_COPY[result.problem], { n: CROC_NAME_MAX }));
+      setNameError(crocNameProblemText(result.problem));
       return;
     }
     setNameError(null);

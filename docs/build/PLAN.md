@@ -62,7 +62,7 @@ We don't know yet which auth system MHP Coaching uses. So:
 | S05 Sessions | DONE | 2026-10-07, review r2 + QA r1 (M1 fixed, re-checked r2) + design r1 PASS (`docs/build/reviews/step-05-*`) |
 | S06 Mini-games | DONE | 2026-10-07, review r2 + QA r1 (M1 fixed, re-checked r2) + design r1 PASS (`docs/build/reviews/step-06-*`) |
 | S07 Gamification | IN PROGRESS | |
-| S08 Profile and settings | IN PROGRESS | |
+| S08 Profile and settings | DONE | 2026-10-07, review r3 + QA r1 (M fixed in r1) + design r1 PASS (`docs/build/reviews/step-08-*`); caution-mode semantics still an owner decision |
 | S09 Release polish | TODO | |
 
 ## Steps

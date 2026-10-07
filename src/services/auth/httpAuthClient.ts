@@ -107,8 +107,8 @@ export function createHttpAuthClient(options: HttpAuthClientOptions): AuthClient
       if (!res?.user) throw new AuthError('server_error');
       return toUser(res.user);
     },
-    async deleteAccount(accessToken) {
-      await request('DELETE', '/me', { accessToken });
+    async deleteAccount(accessToken, password) {
+      await request('DELETE', '/me', { accessToken, body: { password } });
     },
   };
 }

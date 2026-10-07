@@ -49,8 +49,11 @@ export interface AuthClient {
   /** Sets a new password with the token from a reset link. Ends every session of the account. */
   confirmPasswordReset(token: string, password: string): Promise<void>;
   getProfile(accessToken: string): Promise<AuthUser>;
-  /** Deletes the MHP account and all MHP Hypnose data. */
-  deleteAccount(accessToken: string): Promise<void>;
+  /**
+   * Deletes the MHP account and all MHP Hypnose data. Needs the account's password again (recent
+   * authentication); a wrong one fails with `invalid_credentials` and changes nothing.
+   */
+  deleteAccount(accessToken: string, password: string): Promise<void>;
 }
 
 export type AuthErrorCode =

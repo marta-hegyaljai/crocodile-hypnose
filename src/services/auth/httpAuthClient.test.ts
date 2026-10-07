@@ -90,10 +90,12 @@ describe('createHttpAuthClient', () => {
       init.method === 'DELETE' ? new Response(null, { status: 204 }) : json(200, { user }),
     );
     await expect(client.getProfile('tok')).resolves.toMatchObject({ id: 'u1' });
-    await expect(client.deleteAccount('tok')).resolves.toBeUndefined();
+    await expect(client.deleteAccount('tok', 'secret12')).resolves.toBeUndefined();
     for (const [, init] of fetchMock.mock.calls) {
       expect((init.headers as Record<string, string>).authorization).toBe('Bearer tok');
     }
+    // Account deletion re-sends the password (recent authentication).
+    expect(JSON.parse(String(fetchMock.mock.calls[1]![1].body))).toEqual({ password: 'secret12' });
   });
 
   it('maps server error codes', async () => {

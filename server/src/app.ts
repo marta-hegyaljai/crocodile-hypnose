@@ -128,7 +128,12 @@ export async function buildApp({
       timeWindow: config.refreshRateLimit.windowMs,
     },
   });
-  await app.register(meRoutes, { service, now });
+  await app.register(meRoutes, {
+    service,
+    now,
+    // Account deletion checks the password: guessing is limited like a sign-in.
+    rateLimit: { max: config.authRateLimit.max, timeWindow: config.authRateLimit.windowMs },
+  });
 
   return app;
 }

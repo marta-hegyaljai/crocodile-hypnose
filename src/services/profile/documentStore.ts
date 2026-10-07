@@ -28,6 +28,11 @@ export interface DocumentState<T extends SyncedDocument> {
   serverKnown: boolean;
   /** The server refused the document itself (not a connectivity problem); retrying cannot help. */
   rejected: boolean;
+  /**
+   * `doc` rests on a stored copy (the device's, the server's or another tab's), not only on the
+   * defaults: what it shows is the user's own.
+   */
+  seeded: boolean;
 
   /**
    * Switches to `userId`: reads the device copy, then asks the server (retrying with a backoff
@@ -55,6 +60,11 @@ export interface DocumentStoreOptions<T extends SyncedDocument> {
   push: (userId: string, doc: T) => Promise<T>;
   /** How two copies combine (default: the later `updatedAt` wins, the local copy on a tie). */
   merge?: (local: T, remote: T) => T;
+  /**
+   * Stamps a local change made at `at` (default: `updatedAt` only). Returning `prev` means the
+   * change changed nothing.
+   */
+  stamp?: (prev: T, next: T, at: number) => T;
   now?: () => number;
   /** How long after a change the server write starts (changes within it coalesce). */
   debounceMs?: number;
@@ -69,9 +79,31 @@ export function newerOf<T extends SyncedDocument>(local: T | null, remote: T | n
   return remote.updatedAt > local.updatedAt ? remote : local;
 }
 
-/** Equal apart from the timestamp (the server may clamp it, or keep its own). */
+/** JSON with object keys sorted, so two copies built in a different key order compare equal. */
+function stableJson(value: unknown): string {
+  return JSON.stringify(value, (_key, v: unknown) =>
+    v && typeof v === 'object' && !Array.isArray(v)
+      ? Object.fromEntries(
+          Object.entries(v as Record<string, unknown>).sort(([a], [b]) =>
+            a < b ? -1 : a > b ? 1 : 0,
+          ),
+        )
+      : v,
+  );
+}
+
+/**
+ * Equal apart from the timestamps: the server may clamp `updatedAt` and the per-field stamps to
+ * its own clock (a client clock that runs ahead), so a clamped answer is still the same content.
+ * Comparing the stamps would never settle: every push is clamped anew.
+ */
 function sameContent<T extends SyncedDocument>(a: T, b: T): boolean {
-  return JSON.stringify({ ...a, updatedAt: 0 }) === JSON.stringify({ ...b, updatedAt: 0 });
+  return stableJson(withoutStamps(a)) === stableJson(withoutStamps(b));
+}
+
+function withoutStamps<T extends SyncedDocument>(doc: T): Record<string, unknown> {
+  const { updatedAt: _updatedAt, fieldsAt: _fieldsAt, ...rest } = doc as T & { fieldsAt?: unknown };
+  return rest;
 }
 
 /** A server answer that means the document itself was refused, so a retry cannot help. */
@@ -91,6 +123,7 @@ export function createDocumentStore<T extends SyncedDocument>(
 ): StoreApi<DocumentState<T>> {
   const { key, storage, defaults, validate, fetch, push } = options;
   const merge = options.merge ?? ((local: T, remote: T) => newerOf(local, remote) ?? local);
+  const stamp = options.stamp;
   const now = options.now ?? Date.now;
   const debounceMs = options.debounceMs ?? 250;
   const retryMs = options.retryMs ?? { first: 1000, max: 30_000 };
@@ -153,6 +186,7 @@ export function createDocumentStore<T extends SyncedDocument>(
       const state = get();
       const local = state.source === 'none' && !state.dirty ? null : state.doc;
       const merged = local ? merge(local, remote) : remote;
+      if (!state.seeded) set({ seeded: true });
       if (local && sameContent(merged, local)) {
         // Ours is what counts; the server catches up if it has something else.
         if (source === 'server' && !sameContent(remote, local)) {
@@ -163,7 +197,7 @@ export function createDocumentStore<T extends SyncedDocument>(
       }
       // The merge may carry local facts the other side lacks: then it is a new write.
       const dirty = !sameContent(merged, remote);
-      set({ doc: merged, source, dirty, syncError: null });
+      set({ doc: merged, source, dirty, syncError: null, seeded: true });
       if (source === 'server' || dirty) await writeLocal(userId, merged);
       if (dirty) schedulePush();
     }
@@ -190,7 +224,7 @@ export function createDocumentStore<T extends SyncedDocument>(
         }
         if (startedIn !== generation) return;
         retryWait = retryMs.first;
-        set({ serverKnown: true, syncError: null });
+        set({ serverKnown: true, seeded: true, syncError: null });
         if (remote) await adopt(userId, remote, 'server');
         else if (get().source === 'local') set({ dirty: true });
         if (get().dirty) await get().flush();
@@ -220,6 +254,7 @@ export function createDocumentStore<T extends SyncedDocument>(
       syncError: null,
       serverKnown: false,
       rejected: false,
+      seeded: false,
 
       async load(userId, { fresh = false } = {}) {
         generation += 1;
@@ -235,10 +270,16 @@ export function createDocumentStore<T extends SyncedDocument>(
           syncError: null,
           serverKnown: fresh,
           rejected: false,
+          seeded: fresh,
         });
         const local = await readLocal(userId);
         if (startedIn !== generation) return;
-        set({ status: 'ready', doc: local ?? defaults(), source: local ? 'local' : 'none' });
+        set({
+          status: 'ready',
+          doc: local ?? defaults(),
+          source: local ? 'local' : 'none',
+          seeded: fresh || !!local,
+        });
         followOtherTabs(userId, startedIn);
         if (fresh) return;
         void readServer(userId, startedIn);
@@ -250,7 +291,9 @@ export function createDocumentStore<T extends SyncedDocument>(
         const changed = change(doc);
         // Nothing to write (e.g. finishing a stop that is already finished).
         if (changed === doc) return;
-        const next = { ...changed, updatedAt: Math.max(now(), doc.updatedAt + 1) };
+        const at = Math.max(now(), doc.updatedAt + 1);
+        const next = stamp ? stamp(doc, changed, at) : { ...changed, updatedAt: at };
+        if (next === doc) return;
         set({
           doc: next,
           dirty: true,
@@ -320,6 +363,7 @@ export function createDocumentStore<T extends SyncedDocument>(
           syncError: null,
           serverKnown: false,
           rejected: false,
+          seeded: false,
         });
         if (userId && !keepLocal)
           await storage.removeItem(storageKey(userId)).catch(() => undefined);
