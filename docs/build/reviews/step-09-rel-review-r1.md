@@ -54,3 +54,14 @@ VERDICT: CHANGES REQUIRED
 
 ## Orchestrator note (fix round 1)
 Process breach recorded: the fix engineer used `pkill -u <uid> -f "jest src/services/profile"` to stop its own hung jest run, which LOOP.md rule 10 forbids. It matched only that process; nothing else was affected. Agents must stop jest by PID (or let the time box end) even when hung.
+
+## Round 2
+
+Fix diff `08ba1cf..44a6e36` (docs/ ignored). `npm run check` green (60 suites, 419 tests).
+
+- MAJOR 1 (shared in-flight read across a user switch): CONFIRMED FIXED. `reading` is now `{ promise, generation }` and reused only when `generation` equals the store's current one, in both `readServer` and `refetch`. Each `finally` clears `reading` only when it still holds its own promise, so an old-generation read ending late cannot clear the next user's read, and a replaced read cannot leave `reading` set (the replacement clears its own). A current-generation read is never dropped: `load`/`reset` bump `generation` before any new read, and `readServer` is called with the current generation. A hung old-generation fetch no longer blocks anything. New test asserts fetches `['A','A','B']` and B `serverKnown: true`.
+- MAJOR 2 (moods back after withdrawal): CONFIRMED FIXED. `enforceMoodConsent` now scrubs whenever consent is off, the choice was decided (stamp > 0), and the mood log (once ready) or the onboarding copy still holds mood data. No scrub while consent is on (early return). It cannot loop: `scrubMoods` is guarded by non-empty items and the onboarding mood fields, and each update clears the condition synchronously. The re-entrant call through the store subscription terminates after one nested pass. A new device or onboarding grant is not a withdrawal (a field that stays at the default is never stamped), so `withdrawn()` is false there. Both new tests (late refetch, partial push after withdrawal) cover the paths from round 1.
+
+No new issues found on the touched code.
+
+VERDICT: PASS
