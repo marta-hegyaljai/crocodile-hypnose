@@ -27,7 +27,7 @@ export function JungleLeaves({
   const night = atmosphere === 'night';
   const deep = night ? '#0B2A20' : palette.crocGreenDark;
   const mid = night ? '#113A2C' : palette.jungleMid;
-  const light = night ? '#17493A' : palette.crocGreen;
+  const light = night ? palette.jungleNight : palette.crocGreen;
   const rib = night ? '#0A1F18' : '#1C3A24';
 
   const flipX = corner.endsWith('right');

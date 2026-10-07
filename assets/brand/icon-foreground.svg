@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+<defs>
+  <radialGradient id="fg-sky" cx="700" cy="180" r="900" gradientUnits="userSpaceOnUse">
+    <stop offset="0" stop-color="#1C5241"/>
+    <stop offset="0.55" stop-color="#0E2E24"/>
+    <stop offset="1" stop-color="#0A241C"/>
+  </radialGradient>
+  <linearGradient id="fg-water" x1="0" y1="624" x2="0" y2="1024" gradientUnits="userSpaceOnUse">
+    <stop offset="0" stop-color="#1D6E6A"/>
+    <stop offset="1" stop-color="#17524F"/>
+  </linearGradient>
+  <linearGradient id="fg-skin" x1="0" y1="250" x2="0" y2="654" gradientUnits="userSpaceOnUse">
+    <stop offset="0" stop-color="#49783C"/>
+    <stop offset="0.55" stop-color="#3F6B35"/>
+    <stop offset="1" stop-color="#376030"/>
+  </linearGradient>
+  <radialGradient id="fg-eye" cx="574" cy="386" r="134" gradientUnits="userSpaceOnUse">
+    <stop offset="0" stop-color="#FFD57A"/>
+    <stop offset="0.65" stop-color="#F2A93B"/>
+    <stop offset="1" stop-color="#B8701A"/>
+  </radialGradient>
+  <radialGradient id="fg-glow" cx="574" cy="404" r="260" gradientUnits="userSpaceOnUse">
+    <stop offset="0" stop-color="#F2A93B" stop-opacity="0.28"/>
+    <stop offset="1" stop-color="#F2A93B" stop-opacity="0"/>
+  </radialGradient>
+</defs>
+<clipPath id="fg-circle"><circle cx="512" cy="512" r="512"/></clipPath>
+<g transform="translate(133.12 151.12) scale(0.74)"><ellipse cx="574" cy="404" rx="260" ry="250" fill="url(#fg-glow)"/>
+<path d="M 176 664 C 160 500 236 352 410 322 C 470 310 548 306 630 340 C 700 370 760 420 830 470 C 880 486 930 500 952 530 C 968 552 964 596 944 648 L 930 670 Z" fill="url(#fg-skin)"/>
+<path d="M 300 350 l 26 -40 l 30 32 Z" fill="#2E5229" opacity="0.8"/>
+<path d="M 362 324 l 30 -44 l 34 32 Z" fill="#2E5229" opacity="0.8"/>
+<ellipse cx="566" cy="370" rx="158" ry="130" fill="#4F8040"/>
+<ellipse cx="906" cy="522" rx="17" ry="12" fill="#2E5229" opacity="0.85"/>
+<path d="M 700 388 C 780 410 860 452 930 500" fill="none" stroke="#2E5229" stroke-width="7" stroke-linecap="round" opacity="0.35"/>
+<circle cx="574" cy="404" r="124" fill="url(#fg-eye)" stroke="#2E5229" stroke-width="9"/>
+<ellipse cx="588" cy="404" rx="22" ry="94" fill="#0E1A12"/>
+<circle cx="624" cy="352" r="26" fill="#FFFFFF" opacity="0.95"/>
+<circle cx="527" cy="456" r="12" fill="#FFFFFF" opacity="0.6"/>
+<path d="M 474 330 A 128 128 0 0 1 674 330 Q 574 318 474 330 Z" fill="#4F8040"/>
+<path d="M 474 330 A 128 128 0 0 1 674 330" fill="none" stroke="#2E5229" stroke-width="9" stroke-linecap="round"/>
+<path d="M -20 624 q 90 -26 180 0 t 180 0 t 180 0 t 180 0 t 180 0 t 180 0 L 1044 1044 L -20 1044 Z" fill="url(#fg-water)"/>
+<ellipse cx="540" cy="686" rx="340" ry="44" fill="#0E1A12" opacity="0.2"/>
+<path d="M -20 624 q 90 -26 180 0 t 180 0 t 180 0 t 180 0 t 180 0 t 180 0" fill="none" stroke="#7CC4B5" stroke-width="10" stroke-linecap="round" opacity="0.85"/>
+<path d="M 150 742 q 70 -22 140 0" fill="none" stroke="#7CC4B5" stroke-width="9" stroke-linecap="round" opacity="0.45"/>
+<path d="M 790 774 q 70 -22 140 0" fill="none" stroke="#7CC4B5" stroke-width="9" stroke-linecap="round" opacity="0.4"/></g>
+</svg>
