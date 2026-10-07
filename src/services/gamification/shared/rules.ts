@@ -39,6 +39,8 @@ export const GAME_SECONDS: Record<GameKind, number> = {
   breathing: 80,
 };
 
+const DAY_MS = 86_400_000;
+
 /**
  * Activities (sessions and games) that count per UTC day. Far above real use; it bounds what a
  * crafted stream of fresh event ids could earn.
@@ -46,6 +48,18 @@ export const GAME_SECONDS: Record<GameKind, number> = {
 export const MAX_COUNTED_PER_DAY = 12;
 /** Events dated this long before the account existed are not counted (a slow device clock). */
 export const ACCOUNT_CLOCK_SLACK_MS = 24 * 3600_000;
+/**
+ * An event claimed to be older than this when the server received it earns nothing (it is still
+ * stored). Covers a legitimate offline stretch; stops a crafted client from dating events on
+ * every past day of the account.
+ */
+export const MAX_BACKDATE_MS = 14 * DAY_MS;
+/**
+ * Activities that count per UTC day of arrival (the server's receive time), whatever dates they
+ * claim. Above a legitimate week of offline use synced at once (7 * 12 is the per-day ceiling,
+ * real use is far below), far below what a script could post.
+ */
+export const MAX_COUNTED_PER_ARRIVAL_DAY = 30;
 
 /* ---------- weekly goal ---------- */
 
@@ -162,7 +176,6 @@ export const decorationById = (id: string): DecorationDef | undefined =>
 
 /* ---------- days and weeks in the user's time zone ---------- */
 
-const DAY_MS = 86_400_000;
 const formatters = new Map<string, Intl.DateTimeFormat | null>();
 
 function formatterFor(timeZone: string): Intl.DateTimeFormat | null {
@@ -223,8 +236,8 @@ export interface LedgerEntry {
 
 /** The events the ledger reads (as the server stores them in the `events` stream). */
 export type ActivityEvent =
-  | { id: string; type: 'sessionCompleted'; stopId: string; at: number }
-  | { id: string; type: 'gameCompleted'; gameId: string; at: number };
+  | { id: string; type: 'sessionCompleted'; stopId: string; at: number; storedAt?: number }
+  | { id: string; type: 'gameCompleted'; gameId: string; at: number; storedAt?: number };
 
 export interface StopMeta {
   id: string;
@@ -294,10 +307,24 @@ export function deriveNewEntries(input: LedgerInput): LedgerEntry[] {
     perDay.set(d, (perDay.get(d) ?? 0) + 1);
   }
   const notBefore = input.accountCreatedAt - ACCOUNT_CLOCK_SLACK_MS;
-  const events = [...input.events].sort((a, b) => a.at - b.at || (a.id < b.id ? -1 : 1));
+  // Arrival order (the server's stored receive time, fixed at insert, so a replay gives the same
+  // result); events without one (the app's own predictions) arrive when they say they happened.
+  const arrival = (e: ActivityEvent) => e.storedAt ?? e.at;
+  const arrivalDay = (e: ActivityEvent) => Math.floor(arrival(e) / DAY_MS);
+  const events = [...input.events].sort(
+    (a, b) => arrival(a) - arrival(b) || a.at - b.at || (a.id < b.id ? -1 : 1),
+  );
+  // What each arrival day has already been paid for, counting what is stored.
+  const perArrivalDay = new Map<number, number>();
+  for (const event of events) {
+    const k = event.type === 'sessionCompleted' ? `session:${event.id}` : `game:${event.id}`;
+    if (!have.has(k)) continue;
+    perArrivalDay.set(arrivalDay(event), (perArrivalDay.get(arrivalDay(event)) ?? 0) + 1);
+  }
   for (const event of events) {
     const key = event.type === 'sessionCompleted' ? `session:${event.id}` : `game:${event.id}`;
     if (have.has(key) || event.at < notBefore) continue;
+    if (event.storedAt !== undefined && event.at < event.storedAt - MAX_BACKDATE_MS) continue;
     let entry: LedgerEntry;
     if (event.type === 'sessionCompleted') {
       const stop = input.content.stops[event.stopId];
@@ -324,8 +351,10 @@ export function deriveNewEntries(input: LedgerInput): LedgerEntry[] {
     }
     const d = Math.floor(event.at / DAY_MS);
     const count = perDay.get(d) ?? 0;
-    if (count >= MAX_COUNTED_PER_DAY) continue;
+    const arrived = perArrivalDay.get(arrivalDay(event)) ?? 0;
+    if (count >= MAX_COUNTED_PER_DAY || arrived >= MAX_COUNTED_PER_ARRIVAL_DAY) continue;
     perDay.set(d, count + 1);
+    perArrivalDay.set(arrivalDay(event), arrived + 1);
     add(entry);
   }
 

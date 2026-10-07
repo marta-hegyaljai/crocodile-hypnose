@@ -22,13 +22,14 @@ export const HABITAT_KIND = 'habitat';
 
 function activities(events: EventRecord[]): ActivityEvent[] {
   const out: ActivityEvent[] = [];
-  for (const { data } of events) {
+  for (const { data, storedAt } of events) {
     if (data.type === 'sessionCompleted' && typeof data.stopId === 'string') {
       out.push({
         id: String(data.id),
         type: 'sessionCompleted',
         stopId: data.stopId,
         at: Number(data.at),
+        storedAt,
       });
     } else if (data.type === 'gameCompleted' && isGameKind(data.gameId)) {
       out.push({
@@ -36,6 +37,7 @@ function activities(events: EventRecord[]): ActivityEvent[] {
         type: 'gameCompleted',
         gameId: data.gameId,
         at: Number(data.at),
+        storedAt,
       });
     }
   }

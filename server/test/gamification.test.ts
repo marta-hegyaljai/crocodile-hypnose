@@ -2,10 +2,16 @@ import assert from 'node:assert/strict';
 import { afterEach, beforeEach, describe, test } from 'node:test';
 
 import { makeApp, signIn, signUp, type AuthBody, type TestContext } from './helpers.ts';
+import { serverContent } from '../src/content.ts';
 import {
   BADGE_POINTS,
+  DEFAULT_WEEKLY_TARGET,
+  deriveNewEntries,
+  type ActivityEvent,
   FIRST_TIME_BONUS,
   GAME_POINTS,
+  MAX_BACKDATE_MS,
+  MAX_COUNTED_PER_ARRIVAL_DAY,
   MAX_COUNTED_PER_DAY,
   SESSION_POINTS,
   WEEKLY_GOAL_POINTS,
@@ -64,6 +70,26 @@ const events = async (...items: unknown[]) => {
   assert.equal(res.statusCode, 200, res.body);
   return res.json<{ events: Record<string, unknown>[] }>().events;
 };
+
+/** The stored ledger equals a derivation from scratch over the stored events (deterministic). */
+async function replaysTheSame() {
+  const userId = (await req('GET', '/me')).json<{ user: { id: string } }>().user.id;
+  const user = (await req('GET', '/me')).json<{ user: { createdAt: string } }>().user;
+  const stored = await ctx.repo.listLedger(userId);
+  const evs = await ctx.repo.listEvents(userId, 'events', 20_000);
+  const replay = deriveNewEntries({
+    events: evs.map((e) => ({ ...(e.data as object), storedAt: e.storedAt }) as ActivityEvent),
+    ledger: [],
+    content: serverContent(),
+    weeklyTarget: DEFAULT_WEEKLY_TARGET,
+    timeZone: null,
+    onboardingRewarded: false,
+    accountCreatedAt: Date.parse(user.createdAt),
+  });
+  const norm = (l: { key: string; points: number; at: number }[]) =>
+    l.map((e) => `${e.key}:${e.points}:${e.at}`).sort();
+  assert.deepEqual(norm(replay), norm(stored));
+}
 
 describe('points ledger', () => {
   beforeEach(() => start());
@@ -132,6 +158,44 @@ describe('points ledger', () => {
   test('events dated long before the account existed do not count', async () => {
     await events(session('intro-1', { at: ctx.clock.now - 3 * 86_400_000 }));
     assert.equal((await points()).balance, 0);
+  });
+
+  test('back-dated bursts stay bounded by the arrival-day cap and the back-date window', async () => {
+    // An account 100 days old.
+    for (let i = 0; i < 100; i++) ctx.clock.advance(86_400);
+    token = (await signIn(ctx)).json<AuthBody>().tokens.accessToken;
+    const now = ctx.clock.now;
+    // A script posts 12 fresh games on each of the 60 past days, all at once.
+    const burst = Array.from({ length: 60 * MAX_COUNTED_PER_DAY }, (_, i) =>
+      game('breathing', { at: now - (1 + Math.floor(i / MAX_COUNTED_PER_DAY)) * 86_400_000 }),
+    );
+    for (let i = 0; i < burst.length; i += 50) await events(...burst.slice(i, i + 50));
+    const p = await points();
+    const paid = p.entries.filter((e) => e.kind === 'game');
+    assert.ok(paid.length <= MAX_COUNTED_PER_ARRIVAL_DAY, `${paid.length} games paid`);
+    // Nothing older than the window is paid, and the day badges / weekly goals follow paid days only.
+    assert.ok(
+      p.balance <=
+        MAX_COUNTED_PER_ARRIVAL_DAY * GAME_POINTS + 10 * BADGE_POINTS + 3 * WEEKLY_GOAL_POINTS,
+      `balance ${p.balance}`,
+    );
+    assert.ok(!p.badges.some((b) => b.id === 'days30'));
+    // The same events a day later (arrival day changes): still nothing for the old ones.
+    const old = Array.from({ length: 5 }, () => game('firefly', { at: now - 40 * 86_400_000 }));
+    const before = (await points()).balance;
+    await events(...old);
+    assert.equal((await points()).balance, before, 'older than the window pays nothing');
+    assert.ok(40 * 86_400_000 > MAX_BACKDATE_MS);
+    await replaysTheSame();
+  });
+
+  test('an event done offline three days ago pays on its own, and replaying gives the same ledger', async () => {
+    for (let i = 0; i < 10; i++) ctx.clock.advance(86_400);
+    token = (await signIn(ctx)).json<AuthBody>().tokens.accessToken;
+    await events(session('intro-1', { at: ctx.clock.now - 3 * 86_400_000 }));
+    const p = await points();
+    assert.equal(p.balance, SESSION_POINTS.video + FIRST_TIME_BONUS + BADGE_POINTS);
+    await replaysTheSame();
   });
 
   test('the onboarding reward is paid once', async () => {
