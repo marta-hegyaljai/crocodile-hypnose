@@ -44,6 +44,8 @@ export const palette = {
   mudDark: '#5A3F22',
   mistText: '#3A5248',
   mistTextMuted: '#4F665B',
+  /** Foliage lit by moonlight (Night River leaves, bank edges). */
+  jungleNight: '#17493A',
   nightText: '#9DB7B1',
   nightTextMuted: '#7F9A95',
   /** Form field outlines: at least 3:1 against the surfaces they sit on (WCAG 1.4.11). */
