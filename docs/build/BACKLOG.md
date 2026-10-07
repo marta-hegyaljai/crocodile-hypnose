@@ -48,3 +48,7 @@
 | 5 | Review r1 | Keyboard focus on dimmed player controls doesn't reveal them. |
 | 6 | Review r1 | Stillness state not reset on pause/end; no native silence fallback to touch; route accepts any stop/game pairing; breathing guide ring at 10 Hz from JS; breathing hold has no screen-reader alternative; pause overlay doesn't trap focus; parseRecords doesn't validate best; no lifecycle/route tests. |
 | 3 | Review S06 | Flaky unit test: onboarding/screens.test.tsx "hatches on the third tap" fails intermittently under full-suite load. |
+| 7 | Review r1 | eventLog per-event fallback restarts after a 429 mid-way (sync can stall under the limit); `isRefused` treats "unknown" 4xx as permanent. |
+| 7 | Review r1 | GET /me/points and /me/habitat have no rate limit and re-derive the ledger under a write lock (~38 ms per call). |
+| 7 | Review r1 | Points refresh in flight for the previous user blocks the new user's first fetch after a sign-in switch. Purchase refusal matched by message text instead of error code. |
+| 7 | QA r1 | Double-tap Continue on reward/growth moment lands on the Games tab. Weekly toast reappears after reload. Growth-moment sound autoplay console error on reload. Crafted game events add calm minutes (bounded by the daily cap). |
