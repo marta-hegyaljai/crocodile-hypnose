@@ -14,11 +14,11 @@ import {
   pushLog,
 } from '@/services/events/eventLog';
 import {
+  isActivityEvent,
   isMoodEntry,
-  isSessionCompletedEvent,
+  type ActivityEvent,
   type EventLogDoc,
   type MoodEntry,
-  type SessionCompletedEvent,
 } from '@/services/events/types';
 import { mergeProgress } from '@/services/progress/mergeProgress';
 import { defaultProgress, isProgressDoc, type ProgressDoc } from '@/services/progress/types';
@@ -54,8 +54,8 @@ export interface ProfileState {
   settingsKnown: boolean;
   /** Progress along the river (started and finished stops). */
   progress: ProgressDoc;
-  /** "Session completed" events (the input of the points ledger). */
-  sessions: EventLogDoc<SessionCompletedEvent>;
+  /** "Session completed" and "game completed" events (the input of the points ledger). */
+  sessions: EventLogDoc<ActivityEvent>;
   /** Mood check-ins; only recorded with consent (health data). */
   moods: EventLogDoc<MoodEntry>;
   /** Any document has a change the server has not confirmed. */
@@ -71,8 +71,8 @@ export interface ProfileState {
   updateSettings(change: (doc: SettingsDoc) => SettingsDoc): Promise<void>;
   /** Applies a progress change (see `markStarted` / `markDone`); returning the same doc is a no-op. */
   updateProgress(change: (doc: ProgressDoc) => ProgressDoc): Promise<void>;
-  /** Records a finished session once (an id already recorded changes nothing). */
-  recordSession(event: SessionCompletedEvent): Promise<void>;
+  /** Records a finished session or game once (an id already recorded changes nothing). */
+  recordSession(event: ActivityEvent): Promise<void>;
   /** Records a mood check-in once. The caller checks consent. */
   recordMood(entry: MoodEntry): Promise<void>;
   /**
@@ -170,13 +170,17 @@ export function createProfileStore({
       validate: isEventLogDoc(validateItem),
       fetch: async () => confirmedLog(await withToken((token) => client.listEvents(stream, token))),
       push: (_user, doc) =>
-        pushLog(doc, (items) => withToken((token) => client.appendEvents(stream, items, token))),
+        pushLog(
+          doc,
+          (items) => withToken((token) => client.appendEvents(stream, items, token)),
+          isRefused,
+        ),
       merge: mergeLogs,
       now,
       debounceMs,
       retryMs,
     });
-  const sessions = eventLog('events', SESSIONS_KEY, isSessionCompletedEvent);
+  const sessions = eventLog('events', SESSIONS_KEY, isActivityEvent);
   const moods = eventLog('mood', MOODS_KEY, isMoodEntry);
   const docs = [onboarding, settings, progress, sessions, moods] as const;
   let generation = 0;
@@ -322,6 +326,11 @@ export function createProfileStore({
   });
 
   return store;
+}
+
+/** The server refused the events themselves (not the connection): retrying them cannot help. */
+function isRefused(error: unknown): boolean {
+  return isAuthError(error) && (error.code === 'invalid_request' || error.code === 'unknown');
 }
 
 function waitFor<T>(

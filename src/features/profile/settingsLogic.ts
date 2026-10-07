@@ -3,7 +3,7 @@ import type { ContentRepository } from '@/content/repository';
 import type { ZoneId } from '@/content/types';
 import { cautionMode, REMINDER_TIMES } from '@/features/onboarding/flow';
 import { eventsOf } from '@/services/events/eventLog';
-import type { EventLogDoc, SessionCompletedEvent } from '@/services/events/types';
+import type { ActivityEvent, EventLogDoc, SessionCompletedEvent } from '@/services/events/types';
 import type { SafetyAnswers, SettingsDoc, TimeOfDay } from '@/services/profile/types';
 
 /** Pure rules of the settings screens: what each control writes into the settings document. */
@@ -50,11 +50,13 @@ export interface ProfileSummary {
 
 /** Calm minutes and sessions from the finished-session events; the stage from the journey. */
 export function summarize(
-  sessions: EventLogDoc<SessionCompletedEvent>,
+  sessions: EventLogDoc<ActivityEvent>,
   journey: Journey,
   content: Pick<ContentRepository, 'stop'>,
 ): ProfileSummary {
-  const events = eventsOf(sessions);
+  const events = eventsOf(sessions).filter(
+    (e): e is SessionCompletedEvent => e.type === 'sessionCompleted',
+  );
   const seconds = events.reduce((sum, e) => sum + (content.stop(e.stopId)?.durationSec ?? 0), 0);
   const current = journey.zones.find((z) => z.state === 'open' && !z.finished);
   return {

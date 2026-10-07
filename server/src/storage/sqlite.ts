@@ -9,6 +9,7 @@ import {
   type ClientSignIn,
   type DocumentRecord,
   type EventRecord,
+  type LedgerRecord,
   type PasswordResetRecord,
   type RefreshTokenRecord,
   type SessionRecord,
@@ -81,6 +82,17 @@ function toEvent(row: Row): EventRecord {
     data: JSON.parse(str(row.data)) as Record<string, unknown>,
     at: num(row.at),
     storedAt: num(row.stored_at),
+  };
+}
+
+function toLedger(row: Row): LedgerRecord {
+  return {
+    key: str(row.key),
+    kind: str(row.kind),
+    points: num(row.points),
+    seconds: num(row.seconds),
+    ref: str(row.ref),
+    at: num(row.at),
   };
 }
 
@@ -409,6 +421,44 @@ export class SqliteAccountRepository implements AccountRepository {
       )
       .all(userId, stream, limit) as Row[];
     return rows.map(toEvent);
+  }
+
+  private readLedger(userId: string): LedgerRecord[] {
+    return (
+      this.db
+        .prepare('SELECT * FROM user_ledger WHERE user_id = ? ORDER BY at, key')
+        .all(userId) as Row[]
+    ).map(toLedger);
+  }
+
+  async listLedger(userId: string): Promise<LedgerRecord[]> {
+    return this.readLedger(userId);
+  }
+
+  async updateLedger(
+    userId: string,
+    decide: (state: { events: EventRecord[]; ledger: LedgerRecord[] }) => LedgerRecord[],
+    at: number,
+  ): Promise<LedgerRecord[]> {
+    return this.transaction(() => {
+      const events = (
+        this.db
+          .prepare('SELECT * FROM user_events WHERE user_id = ? AND stream = ? ORDER BY at, id')
+          .all(userId, 'events') as Row[]
+      ).map(toEvent);
+      const ledger = this.readLedger(userId);
+      const added = decide({ events, ledger });
+      if (added.length === 0) return ledger;
+      const insert = this.db.prepare(
+        `INSERT INTO user_ledger (user_id, key, kind, points, seconds, ref, at, stored_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT (user_id, key) DO NOTHING`,
+      );
+      for (const e of added) {
+        insert.run(userId, e.key, e.kind, e.points, e.seconds, e.ref, e.at, at);
+      }
+      return this.readLedger(userId);
+    });
   }
 
   async deleteEvents(userId: string, stream: string): Promise<number> {

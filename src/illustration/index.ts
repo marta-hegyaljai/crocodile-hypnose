@@ -17,3 +17,6 @@ export { RiverPath, smoothPath, type RiverPathProps } from './scene/RiverPath';
 export { Lagoon, type LagoonProps } from './scene/Lagoon';
 export { fitPeekCroc, type PeekFitOptions } from './scene/peekFit';
 export { useLoop, useBreath } from './scene/useLoop';
+export { Decoration, type DecorationId, type DecorationProps } from './habitat/Decoration';
+export { BadgeScale } from './habitat/BadgeScale';
+export { HabitatScene, type HabitatSceneProps } from './habitat/HabitatScene';

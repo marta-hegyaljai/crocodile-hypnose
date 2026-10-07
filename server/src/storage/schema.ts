@@ -5,7 +5,7 @@
  * App data tables added later (croc, points, check-ins) reference users(id) ON DELETE CASCADE too,
  * so deleting an account removes everything.
  */
-export const SCHEMA_VERSION = 4;
+export const SCHEMA_VERSION = 5;
 
 export const SCHEMA_V1 = `
 CREATE TABLE IF NOT EXISTS users (
@@ -100,10 +100,30 @@ CREATE TABLE IF NOT EXISTS user_events (
 CREATE INDEX IF NOT EXISTS user_events_at_idx ON user_events (user_id, stream, at);
 `;
 
+/**
+ * v5: the points ledger. One row per earned or spent amount, keyed so that the same reward can
+ * only ever be stored once (`session:<eventId>`, `first:<stopId>`, `badge:<id>`, `item:<id>`...).
+ * Rows are only added, never changed or removed: points, calm time and badges never go back.
+ */
+export const SCHEMA_V5 = `
+CREATE TABLE IF NOT EXISTS user_ledger (
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  key TEXT NOT NULL,
+  kind TEXT NOT NULL,
+  points INTEGER NOT NULL,
+  seconds INTEGER NOT NULL,
+  ref TEXT NOT NULL,
+  at BIGINT NOT NULL,
+  stored_at BIGINT NOT NULL,
+  PRIMARY KEY (user_id, key)
+);
+`;
+
 /** Migration for each version, applied in order from the database's current version. */
 export const MIGRATIONS: Record<number, string> = {
   1: SCHEMA_V1,
   2: SCHEMA_V2,
   3: SCHEMA_V3,
   4: SCHEMA_V4,
+  5: SCHEMA_V5,
 };

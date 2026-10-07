@@ -19,7 +19,13 @@ import {
   type AuthStore,
 } from '@/services/auth';
 import { MotionProvider } from '@/motion/MotionProvider';
+import {
+  GamificationProvider,
+  createGamificationStore,
+  type GamificationStore,
+} from '@/services/gamification';
 import { ProfileProvider, createProfileStore, type ProfileStore } from '@/services/profile';
+import { createFakeGamificationClient } from '@/test/fakeGamification';
 import { createFakeAuthClient, memoryStorage, type FakeAuthClient } from '@/test/fakeAuth';
 import { createFakeProfileClient } from '@/test/fakeProfile';
 import { AtmosphereProvider } from '@/theme';
@@ -46,6 +52,7 @@ const metrics = {
 let client: FakeAuthClient;
 let store: AuthStore;
 let profile: ProfileStore;
+let gamification: GamificationStore;
 
 beforeEach(async () => {
   jest.clearAllMocks();
@@ -59,6 +66,13 @@ beforeEach(async () => {
     storage: memoryStorage(),
     debounceMs: 0,
   });
+  gamification = createGamificationStore({
+    client: createFakeGamificationClient(),
+    session,
+    storage: memoryStorage(),
+    profile,
+    debounceMs: 0,
+  });
   await store.getState().bootstrap();
 });
 
@@ -67,12 +81,14 @@ async function show(Screen: React.ComponentType) {
     <SafeAreaProvider initialMetrics={metrics}>
       <AuthProvider store={store}>
         <ProfileProvider store={profile}>
-          {/* Reduced motion: the scene's endless loops would never settle under Jest. */}
-          <MotionProvider initialOverride>
-            <AtmosphereProvider>
-              <Screen />
-            </AtmosphereProvider>
-          </MotionProvider>
+          <GamificationProvider store={gamification}>
+            {/* Reduced motion: the scene's endless loops would never settle under Jest. */}
+            <MotionProvider initialOverride>
+              <AtmosphereProvider>
+                <Screen />
+              </AtmosphereProvider>
+            </MotionProvider>
+          </GamificationProvider>
         </ProfileProvider>
       </AuthProvider>
     </SafeAreaProvider>,

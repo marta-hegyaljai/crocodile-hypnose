@@ -548,6 +548,81 @@ export const en = {
       goHome: 'Go to home',
     },
   },
+  gamification: {
+    pointsWithPending: ph('{n} +{pending}'), // PLACEHOLDER
+    a11yPointsPending: '{n} points, {pending} more waiting to sync',
+    pendingSync: ph('+{n} Points waiting to sync'), // PLACEHOLDER
+    growth: {
+      title: ph('[Growth title]'), // PLACEHOLDER
+      message: ph('{name} reached {stage}.'), // PLACEHOLDER
+      continue: 'Continue',
+    },
+    weekly: {
+      reachedTitle: ph('[Weekly goal reached]'), // PLACEHOLDER
+      reachedMessage: ph('{done} of {total} days this week.'), // PLACEHOLDER
+      dismiss: 'Close',
+      title: 'Weekly goal',
+      days: ph('{n} days a week'), // PLACEHOLDER
+      less: 'Fewer days',
+      more: 'More days',
+      progress: ph('{done} of {total} days this week'), // PLACEHOLDER
+    },
+    habitat: {
+      title: ph('[Habitat title]'), // PLACEHOLDER
+      stage: ph('{stage}'), // PLACEHOLDER
+      calm: ph('{n} calm minutes'), // PLACEHOLDER
+      nextStage: ph('{n} more minutes to {stage}'), // PLACEHOLDER
+      fullGrown: ph('[Fully grown]'), // PLACEHOLDER
+      decorations: ph('[Decorations]'), // PLACEHOLDER
+      badges: ph('[Scales]'), // PLACEHOLDER
+      buy: ph('{n} Points'), // PLACEHOLDER
+      place: 'Place',
+      remove: 'Take out',
+      owned: 'Owned',
+      locked: 'Locked',
+      unlockBy: ph('Unlocked by: {badge}'), // PLACEHOLDER
+      unlockFree: 'Claim',
+      insufficient: ph('Not enough points yet.'), // PLACEHOLDER
+      morePoints: ph('{n} more points'), // PLACEHOLDER
+      willSwap: ph('Takes the place of {item}'), // PLACEHOLDER
+      lockedError: ph('Not unlocked yet.'), // PLACEHOLDER
+      offline: 'Buying needs a connection. Try again when you are online.',
+      error: 'That did not work. Try again.',
+      a11yItem: '{name}, {state}',
+      a11yBadge: '{name}, {state}',
+      earned: 'Earned',
+      notEarned: 'Not earned yet',
+      a11yScene: '{name} in the lagoon with {count} decorations',
+    },
+    items: {
+      lilyPads: ph('Lily pads'), // PLACEHOLDER
+      reeds: ph('Reeds'), // PLACEHOLDER
+      stones: ph('Stones'), // PLACEHOLDER
+      driftwood: ph('Driftwood'), // PLACEHOLDER
+      dragonflies: ph('Dragonflies'), // PLACEHOLDER
+      lotus: ph('Lotus'), // PLACEHOLDER
+      fireflies: ph('Fireflies'), // PLACEHOLDER
+      mangrove: ph('Mangrove'), // PLACEHOLDER
+      heron: ph('Heron'), // PLACEHOLDER
+      waterfall: ph('Waterfall'), // PLACEHOLDER
+      glowLotus: ph('Glowing lotus'), // PLACEHOLDER
+      turtle: ph('Turtle'), // PLACEHOLDER
+    },
+    newScale: ph('New scale: {name}'), // PLACEHOLDER
+    a11yNewScale: '{name} scale earned, {n} points',
+    badges: {
+      firstSession: ph('First session'), // PLACEHOLDER
+      firstLongTrance: ph('First long trance'), // PLACEHOLDER
+      firstStillness: ph('First stillness game'), // PLACEHOLDER
+      firstFirefly: ph('First firefly game'), // PLACEHOLDER
+      firstBreathing: ph('First breathing game'), // PLACEHOLDER
+      days3: ph('3 days'), // PLACEHOLDER
+      days7: ph('7 days'), // PLACEHOLDER
+      days30: ph('30 days'), // PLACEHOLDER
+      zoneCompleted: ph('Zone completed'), // PLACEHOLDER
+      firstDecoration: ph('First decoration'), // PLACEHOLDER
+    },
+  },
   notFound: {
     title: 'Page not found',
     home: 'Go home',

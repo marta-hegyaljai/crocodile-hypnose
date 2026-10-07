@@ -3,15 +3,18 @@
  * a client-made id, so the app can send an event again (a retry, another tab) and it is stored
  * once.
  *
- * - `events`: "session completed" events, the input of the points ledger (step 7). Whether a
- *   completion is the stop's first one is decided here, against what is stored, so the
- *   first-time reward can never be granted twice for a stop (two offline devices, a replay).
+ * - `events`: "session completed" and "game completed" events, the input of the points ledger.
+ *   A completion's stop type and whether it is the stop's first one are decided here, from the
+ *   server's content and what is stored, never from the client's claim. The ledger itself pays
+ *   once per key (see `gamification.ts`), so this flag is only what the app shows.
  * - `mood`: mood check-ins before and after a session. Health data: stored only while the user
  *   has agreed to it in their settings (or, before settings exist, in onboarding).
  */
 import { ApiError } from './errors.ts';
+import { serverContent } from './content.ts';
 import { STOP_ID_PATTERN } from './documents.ts';
 import type { EventRecord } from './storage/repository.ts';
+import { GAME_KINDS } from '../../src/services/gamification/shared/rules.ts';
 
 export const EVENT_STREAMS = ['events', 'mood'] as const;
 export type EventStream = (typeof EVENT_STREAMS)[number];
@@ -38,8 +41,21 @@ const sessionCompleted = {
     stopId: { type: 'string', pattern: STOP_ID_PATTERN },
     stopType: { type: 'string', enum: STOP_TYPES },
     at: time,
-    /** The app's claim; the server keeps it only if no first completion of the stop is stored. */
+    /** The app's guess; the server decides it from what is stored. */
     firstTime: { type: 'boolean' },
+  },
+} as const;
+
+/** A mini-game played through (from the clearing or a map stop). */
+const gameCompleted = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['id', 'type', 'gameId', 'at'],
+  properties: {
+    id: { type: 'string', pattern: EVENT_ID_PATTERN },
+    type: { type: 'string', const: 'gameCompleted' },
+    gameId: { type: 'string', enum: GAME_KINDS },
+    at: time,
   },
 } as const;
 
@@ -70,7 +86,7 @@ export function bodySchemaForStream(stream: EventStream): object {
         type: 'array',
         minItems: 1,
         maxItems: MAX_EVENTS_PER_REQUEST,
-        items: stream === 'events' ? sessionCompleted : moodEntry,
+        items: stream === 'events' ? { anyOf: [sessionCompleted, gameCompleted] } : moodEntry,
       },
     },
   };
@@ -93,12 +109,18 @@ export function decideEvent(
       [STREAM_FIELD[stream]]: 'invalid_request',
     });
   }
-  if (stream !== 'events') return event;
+  if (stream !== 'events' || event.data.type !== 'sessionCompleted') return event;
+  // The stop's type and the first-time flag come from the server's content and stored events.
+  // A stop the content does not know is stored (so the app's stream keeps syncing) but earns
+  // nothing: the ledger skips it.
   const stopId = event.data.stopId;
+  const stop = serverContent().stops[String(stopId)];
   const firstTime =
-    event.data.firstTime === true &&
-    !stored.some((e) => e.data.stopId === stopId && e.data.firstTime === true);
-  return { ...event, data: { ...event.data, firstTime } };
+    !!stop && !stored.some((e) => e.data.type === 'sessionCompleted' && e.data.stopId === stopId);
+  return {
+    ...event,
+    data: { ...event.data, stopType: stop?.type ?? event.data.stopType, firstTime },
+  };
 }
 
 /** The incoming items as records to append, their times clamped to the server's clock. */

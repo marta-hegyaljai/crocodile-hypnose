@@ -24,7 +24,9 @@ export type IconName =
   | 'mail'
   | 'rewind'
   | 'waves'
-  | 'captions';
+  | 'captions'
+  | 'plus'
+  | 'minus';
 
 export interface IconProps {
   name: IconName;
@@ -49,6 +51,8 @@ export function Icon({ name, size = 24, color, strokeWidth = 2.2, testID }: Icon
 
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" testID={testID} aria-hidden>
+      {name === 'plus' && <Path d="M12 5 V19 M5 12 H19" {...stroke} />}
+      {name === 'minus' && <Path d="M5 12 H19" {...stroke} />}
       {name === 'home' && (
         <>
           <Path d="M4 11.5 L12 4.5 L20 11.5" {...stroke} />
@@ -206,7 +210,11 @@ export function Icon({ name, size = 24, color, strokeWidth = 2.2, testID }: Icon
             d="M5 5.5 H19 A2 2 0 0 1 21 7.5 V16.5 A2 2 0 0 1 19 18.5 H5 A2 2 0 0 1 3 16.5 V7.5 A2 2 0 0 1 5 5.5 Z"
             {...stroke}
           />
-          <Path d="M6.5 11 H11 M13 11 H17.5 M6.5 14.5 H14" {...stroke} strokeWidth={strokeWidth * 0.8} />
+          <Path
+            d="M6.5 11 H11 M13 11 H17.5 M6.5 14.5 H14"
+            {...stroke}
+            strokeWidth={strokeWidth * 0.8}
+          />
         </>
       )}
     </Svg>

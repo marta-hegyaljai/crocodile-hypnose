@@ -48,6 +48,12 @@
 | 5 | Review r1 | Keyboard focus on dimmed player controls doesn't reveal them. |
 | 6 | Review r1 | Stillness state not reset on pause/end; no native silence fallback to touch; route accepts any stop/game pairing; breathing guide ring at 10 Hz from JS; breathing hold has no screen-reader alternative; pause overlay doesn't trap focus; parseRecords doesn't validate best; no lifecycle/route tests. |
 | 3 | Review S06 | Flaky unit test: onboarding/screens.test.tsx "hatches on the third tap" fails intermittently under full-suite load. |
+| 7 | Review r1 | eventLog per-event fallback restarts after a 429 mid-way (sync can stall under the limit); `isRefused` treats "unknown" 4xx as permanent. |
+| 7 | Review r1 | GET /me/points and /me/habitat have no rate limit and re-derive the ledger under a write lock (~38 ms per call). |
+| 7 | Review r1 | Points refresh in flight for the previous user blocks the new user's first fetch after a sign-in switch. Purchase refusal matched by message text instead of error code. |
+| 7 | QA r1 | Double-tap Continue on reward/growth moment lands on the Games tab. Weekly toast reappears after reload. Growth-moment sound autoplay console error on reload. Crafted game events add calm minutes (bounded by the daily cap). |
+| 7 | Fix r1 | Client pendingGains ignores the 14-day back-date window: a device offline > 14 days shows points the server won’t pay. |
+| 7 | Review r2 | A crafted client can reach days7/days30 and a couple of past weekly goals ~14 days early; >30 activities arriving on one UTC day lose the excess permanently. |
 | 8 | QA r1 | Consent off: no confirm, "deleted" note below the fold, says deleted while only queued offline. |
 | 8 | QA r1 | Reminder time: empty field gives no error. Email ellipsised in the header (matters before delete). |
 | 8 | QA r1 | Keyboard/SR: Tab continues into the inactive Home map; radio groups unnamed, no arrow keys; all section titles are h1; Escape doesn't close the delete confirmation. Export block is a small inner scroller. |

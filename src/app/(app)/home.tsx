@@ -8,12 +8,14 @@ import type { StopView, TodaysSession } from '@/content/journey';
 import { localContent } from '@/content/repository';
 import { gameIdOfStop } from '@/features/games/catalog';
 import { useTapShield } from '@/features/layout/TapShield';
+import { HomeCelebrations } from '@/features/habitat/HomeCelebrations';
 import { HomeHeader } from '@/features/home/HomeHeader';
 import { TodayCard } from '@/features/home/TodayCard';
 import { useJourney } from '@/features/home/useJourney';
 import { RiverMap } from '@/features/map/RiverMap';
 import { StopSheet } from '@/features/map/StopSheet';
 import { useAuth } from '@/services/auth';
+import { useGrowthStage } from '@/services/gamification';
 import { useProfile } from '@/services/profile';
 import { isAuthError } from '@/services/auth/types';
 import { space, useTheme } from '@/theme';
@@ -33,6 +35,7 @@ export default function HomeScreen() {
     (s) => s.dirty && isAuthError(s.syncError) && s.syncError.isConnectivity,
   );
   const { journey, today } = useJourney();
+  const crocStage = useGrowthStage();
   // On a short screen (e.g. 360x640) the top block tightens so more of the river shows.
   const compact = useWindowDimensions().height < 720;
   const [selected, setSelected] = useState<StopView | null>(null);
@@ -92,7 +95,7 @@ export default function HomeScreen() {
         journey={journey}
         currentStopId={today?.stop.id ?? null}
         crocName={crocName}
-        crocStage="hatchling"
+        crocStage={crocStage}
         onStopPress={setSelected}
         bottomInset={space.xl}
         active={focused}
@@ -105,6 +108,7 @@ export default function HomeScreen() {
         onStart={onSheetStart}
         onClose={closeSheet}
       />
+      <HomeCelebrations crocName={crocName} active={focused && !selected} />
     </View>
   );
 }

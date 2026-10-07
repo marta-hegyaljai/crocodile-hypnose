@@ -1,16 +1,8 @@
 import React from 'react';
 
-import { t } from '@/copy';
-import { TabPlaceholder } from '@/features/home/TabPlaceholder';
+import { HabitatScreen } from '@/features/habitat/HabitatScreen';
 
-/** The croc's habitat (step 7). */
+/** The croc's habitat: the lagoon to decorate, its growth, the weekly goal and the scales. */
 export default function CrocTab() {
-  return (
-    <TabPlaceholder
-      title={t('tabs.croc')}
-      message={t('tabsPlaceholder.croc')}
-      expression="happy"
-      testID="croc-screen"
-    />
-  );
+  return <HabitatScreen />;
 }

@@ -17,9 +17,12 @@ import {
   type GameProps,
   type GameResult,
 } from '@/features/games';
+import { GameReward } from '@/features/habitat/RewardExtras';
 import { useJourney } from '@/features/home/useJourney';
 import { useAuth } from '@/services/auth';
-import { useProfile } from '@/services/profile';
+import { newEventId } from '@/services/events/types';
+import { GAME_POINTS } from '@/services/gamification';
+import { useProfile, useProfileStore } from '@/services/profile';
 import { markDone, markStarted } from '@/services/progress/mergeProgress';
 import { space } from '@/theme';
 import { Button, Screen, Text } from '@/ui';
@@ -44,6 +47,7 @@ export default function GameScreen() {
   const userId = useAuth((s) => s.user?.id ?? null);
   const crocName = useProfile((s) => s.settings.crocName) ?? t('croc.defaultName');
   const updateProgress = useProfile((s) => s.updateProgress);
+  const profile = useProfileStore();
   const record = useGameRecordsStore((s) => s.record);
   useGameRecords(userId);
   const { journey } = useJourney();
@@ -57,15 +61,31 @@ export default function GameScreen() {
     if (stopPlayable && stopId) void updateProgress((doc) => markStarted(doc, stopId, Date.now()));
   }, [stopPlayable, stopId, updateProgress]);
 
-  /** The single integration point: a game was played through. */
+  /**
+   * The single integration point: a game was played through. It is recorded on this device (best
+   * results), as a "game completed" event for the points ledger, and, played from a map stop, as
+   * that stop's completion too. Each play has its own event id, so a retry is stored once.
+   */
   const onGameCompleted = useCallback(
     (result: GameResult) => {
       void record(result);
+      const state = profile.getState();
+      const at = Date.now();
+      const id = newEventId();
+      void state.recordSession({ id, type: 'gameCompleted', gameId: result.gameId, at });
       if (stopPlayable && stopId) {
-        void updateProgress((doc) => markDone(doc, stopId, Date.now()));
+        void state.recordSession({
+          id: `${id}-s`,
+          type: 'sessionCompleted',
+          stopId,
+          stopType: 'game',
+          at,
+          firstTime: state.progress.stops[stopId]?.status !== 'done',
+        });
+        void updateProgress((doc) => markDone(doc, stopId, at));
       }
     },
-    [record, stopPlayable, stopId, updateProgress],
+    [record, profile, stopPlayable, stopId, updateProgress],
   );
 
   if (!game) {
@@ -86,6 +106,7 @@ export default function GameScreen() {
       game={game}
       crocName={crocName}
       resultLabel={resultLabel}
+      reward={<GameReward points={GAME_POINTS} />}
       onStarted={onStarted}
       onGameCompleted={onGameCompleted}
       onLeave={back}

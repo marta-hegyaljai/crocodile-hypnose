@@ -11,6 +11,8 @@ import { AuthProvider, useAuth } from '@/services/auth';
 import { appAuthStore } from '@/services/auth/instance';
 import { FeedbackProvider } from '@/services/feedback';
 import { appFeedback } from '@/services/feedback/instance';
+import { GamificationProvider } from '@/services/gamification';
+import { appGamificationStore } from '@/services/gamification/instance';
 import { ProfileProvider, useProfile } from '@/services/profile';
 import { appProfileStore } from '@/services/profile/instance';
 import '@/services/reminders/instance';
@@ -43,9 +45,11 @@ export default function RootLayout() {
   return (
     <AuthProvider store={appAuthStore}>
       <ProfileProvider store={appProfileStore}>
-        <FeedbackProvider feedback={appFeedback}>
-          <RootNavigator />
-        </FeedbackProvider>
+        <GamificationProvider store={appGamificationStore}>
+          <FeedbackProvider feedback={appFeedback}>
+            <RootNavigator />
+          </FeedbackProvider>
+        </GamificationProvider>
       </ProfileProvider>
     </AuthProvider>
   );

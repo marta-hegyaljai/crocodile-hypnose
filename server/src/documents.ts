@@ -8,8 +8,16 @@
  * (one-way facts kept), settings field by field (`mergeSettings`), progress per stop.
  */
 import { ApiError, type ErrorCode } from './errors.ts';
+import {
+  GROWTH_STAGES,
+  isTimeZone,
+  stageIndex,
+  WEEKLY_TARGET_MAX,
+  WEEKLY_TARGET_MIN,
+  type GrowthStage,
+} from '../../src/services/gamification/shared/rules.ts';
 
-export const DOCUMENT_KINDS = ['onboarding', 'settings', 'progress'] as const;
+export const DOCUMENT_KINDS = ['onboarding', 'settings', 'progress', 'gamification'] as const;
 export type DocumentKind = (typeof DOCUMENT_KINDS)[number];
 
 export function isDocumentKind(value: unknown): value is DocumentKind {
@@ -235,17 +243,37 @@ const progressV1 = {
   },
 } as const;
 
+/**
+ * The user's gamification choices and what the app already celebrated, v1: the weekly goal
+ * (target days and the time zone its weeks are counted in), the croc stage whose growth moment
+ * was shown, and the last week whose goal was celebrated. The two "seen" marks only move forward.
+ */
+const gamificationV1 = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['version', 'updatedAt', 'weeklyTarget', 'timeZone', 'seenStage', 'celebratedWeek'],
+  properties: {
+    ...base,
+    weeklyTarget: { type: 'integer', minimum: WEEKLY_TARGET_MIN, maximum: WEEKLY_TARGET_MAX },
+    timeZone: { type: ['string', 'null'], minLength: 1, maxLength: 64 },
+    seenStage: oneOf(...GROWTH_STAGES),
+    celebratedWeek: { type: ['integer', 'null'] },
+  },
+} as const;
+
 /** JSON schema per kind and version. Add a version here to extend a document. */
 export const DOCUMENT_SCHEMAS: Record<DocumentKind, Record<number, object>> = {
   onboarding: { 1: onboardingV1 },
   settings: { 1: settingsV1 },
   progress: { 1: progressV1 },
+  gamification: { 1: gamificationV1 },
 };
 
 export const CURRENT_VERSION: Record<DocumentKind, number> = {
   onboarding: 1,
   settings: 1,
   progress: 1,
+  gamification: 1,
 };
 
 /** Fastify body schema for PUT: any version this server knows for the kind. */
@@ -364,6 +392,9 @@ export function checkDocumentRules(kind: DocumentKind, data: Doc, now: number): 
       if ((r.status === 'done') !== (r.completedAt !== null)) fields.stops = 'invalid_request';
     }
   }
+  if (kind === 'gamification' && data.timeZone !== null && !isTimeZone(data.timeZone)) {
+    fields.timeZone = 'invalid_request';
+  }
   if (Object.keys(fields).length > 0) {
     throw new ApiError(400, 'invalid_request', `The ${kind} document is not valid.`, fields);
   }
@@ -408,6 +439,7 @@ export function resolveDocument(kind: DocumentKind, stored: Doc | null, incoming
     return { ...merged, updatedAt, fieldsAt: { ...record(merged.fieldsAt), doc: updatedAt } };
   }
   if (!stored) return incoming;
+  if (kind === 'gamification') return mergeGamification(stored, incoming);
   const storedAt = Number(stored.updatedAt);
   const incomingAt = Number(incoming.updatedAt);
   if (stored.completed === true && incoming.completed !== true) return null;
@@ -469,5 +501,24 @@ export function mergeProgress(stored: Doc, incoming: Doc): Doc {
     version: 1,
     updatedAt: Math.max(Number(stored.updatedAt) || 0, Number(incoming.updatedAt) || 0),
     stops: sorted,
+  };
+}
+
+/**
+ * The newer copy's choices win; what was already celebrated stays celebrated (the later stage,
+ * the later week), so a stale device never shows a growth moment twice. Mirrors the app.
+ */
+export function mergeGamification(stored: Doc, incoming: Doc): Doc {
+  const newer = Number(incoming.updatedAt) >= Number(stored.updatedAt) ? incoming : stored;
+  const a = stored.seenStage as GrowthStage;
+  const b = incoming.seenStage as GrowthStage;
+  const weeks = [stored.celebratedWeek, incoming.celebratedWeek].filter(
+    (w): w is number => typeof w === 'number',
+  );
+  return {
+    ...newer,
+    updatedAt: Math.max(Number(stored.updatedAt), Number(incoming.updatedAt)),
+    seenStage: stageIndex(a) >= stageIndex(b) ? a : b,
+    celebratedWeek: weeks.length > 0 ? Math.max(...weeks) : null,
   };
 }

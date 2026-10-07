@@ -2,10 +2,10 @@ import { AuthError } from '@/services/auth/types';
 import { createJsonRequest, type JsonRequestOptions } from '@/services/http/jsonRequest';
 
 import {
+  isActivityEvent,
   isMoodEntry,
-  isSessionCompletedEvent,
+  type ActivityEvent,
   type MoodEntry,
-  type SessionCompletedEvent,
 } from '@/services/events/types';
 import { isProgressDoc, type ProgressDoc } from '@/services/progress/types';
 
@@ -26,7 +26,7 @@ export interface DocumentTypes {
 
 /** The append-only streams and their events (`GET/POST /me/events`, `/me/mood`). */
 export interface StreamTypes {
-  events: SessionCompletedEvent;
+  events: ActivityEvent;
   mood: MoodEntry;
 }
 export type StreamKind = keyof StreamTypes;
@@ -59,7 +59,7 @@ export interface ProfileClient {
 
 const streamField: Record<StreamKind, string> = { events: 'events', mood: 'entries' };
 const streamValidators: { [S in StreamKind]: (value: unknown) => value is StreamTypes[S] } = {
-  events: isSessionCompletedEvent,
+  events: isActivityEvent,
   mood: isMoodEntry,
 };
 

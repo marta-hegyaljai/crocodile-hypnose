@@ -30,7 +30,13 @@ import {
   type HapticKind,
   type UiSound,
 } from '@/services/feedback';
+import {
+  GamificationProvider,
+  createGamificationStore,
+  type GamificationStore,
+} from '@/services/gamification';
 import { ProfileProvider, createProfileStore, type ProfileStore } from '@/services/profile';
+import { createFakeGamificationClient } from '@/test/fakeGamification';
 import type { OnboardingDoc } from '@/services/profile/types';
 import { createFakeAuthClient, memoryStorage } from '@/test/fakeAuth';
 import { createFakeProfileClient, type FakeProfileClient } from '@/test/fakeProfile';
@@ -70,6 +76,7 @@ const metrics = {
 
 let auth: AuthStore;
 let profile: ProfileStore;
+let gamification: GamificationStore;
 let profileClient: FakeProfileClient;
 let haptics: HapticKind[];
 let sounds: UiSound[];
@@ -85,6 +92,13 @@ beforeEach(async () => {
     client: profileClient,
     session,
     storage: memoryStorage(),
+    debounceMs: 0,
+  });
+  gamification = createGamificationStore({
+    client: createFakeGamificationClient(),
+    session,
+    storage: memoryStorage(),
+    profile,
     debounceMs: 0,
   });
   await auth.getState().bootstrap();
@@ -113,16 +127,18 @@ async function show(Screen: React.ComponentType) {
     <SafeAreaProvider initialMetrics={metrics}>
       <AuthProvider store={auth}>
         <ProfileProvider store={profile}>
-          <FeedbackProvider feedback={feedback()}>
-            <TapShieldProvider>
-              {/* Reduced motion: the scene's endless loops would never settle under Jest. */}
-              <MotionProvider initialOverride>
-                <AtmosphereProvider>
-                  <Screen />
-                </AtmosphereProvider>
-              </MotionProvider>
-            </TapShieldProvider>
-          </FeedbackProvider>
+          <GamificationProvider store={gamification}>
+            <FeedbackProvider feedback={feedback()}>
+              <TapShieldProvider>
+                {/* Reduced motion: the scene's endless loops would never settle under Jest. */}
+                <MotionProvider initialOverride>
+                  <AtmosphereProvider>
+                    <Screen />
+                  </AtmosphereProvider>
+                </MotionProvider>
+              </TapShieldProvider>
+            </FeedbackProvider>
+          </GamificationProvider>
         </ProfileProvider>
       </AuthProvider>
     </SafeAreaProvider>,
