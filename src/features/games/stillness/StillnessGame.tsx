@@ -149,7 +149,11 @@ export function StillnessGame({ running, ended, onFinish, crocName }: GameProps)
     // finger never rested (then no samples were taken and the score is the gentle default).
     if (time >= STILLNESS_DURATION_MS) {
       finished.current = true;
-      onFinish({ gameId: 'stillness', score: tracker.current.score() });
+      onFinish({
+        gameId: 'stillness',
+        score: tracker.current.score(),
+        samples: tracker.current.samples(),
+      });
       return;
     }
     if (sourceRef.current === 'probing') return;

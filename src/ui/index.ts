@@ -20,3 +20,5 @@ export { moveFocus } from './moveFocus';
 export { Reveal, type RevealProps } from './Reveal';
 export { spaceActivates } from './webKeys';
 export { ToggleRow, type ToggleRowProps } from './ToggleRow';
+export { RadioGroup, type RadioGroupProps } from './RadioGroup';
+export { useDialog } from './useDialog';

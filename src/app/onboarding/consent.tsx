@@ -1,6 +1,6 @@
 import { Redirect } from 'expo-router';
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet } from 'react-native';
 
 import { t } from '@/copy';
 import { ChoiceCard } from '@/features/onboarding/ChoiceCard';
@@ -10,7 +10,7 @@ import { useCrocReaction } from '@/features/onboarding/useCrocReaction';
 import { useOnboardingActions, useStepScreen } from '@/features/onboarding/useOnboardingFlow';
 import { useFeedback } from '@/services/feedback';
 import { space, useTheme } from '@/theme';
-import { Button, Icon, Text } from '@/ui';
+import { Button, Icon, RadioGroup, Text } from '@/ui';
 
 /** Step 4: explicit opt-in for storing mood check-ins (health data). The app works without it. */
 export default function ConsentScreen() {
@@ -54,7 +54,7 @@ export default function ConsentScreen() {
         />
       }
     >
-      <View style={styles.options} accessibilityRole="radiogroup">
+      <RadioGroup label={t('onboarding.consent.title')} style={styles.options}>
         <ChoiceCard
           role="radio"
           label={t('onboarding.consent.allow')}
@@ -73,7 +73,7 @@ export default function ConsentScreen() {
           onPress={() => choose(false)}
           testID="consent-decline"
         />
-      </View>
+      </RadioGroup>
       <Text variant="caption" tone="secondary" align="center">
         {t('onboarding.consent.note')}
       </Text>

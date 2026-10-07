@@ -149,7 +149,6 @@ const press = (id: string) => fireEvent.press(screen.getByTestId(id));
 const type = (id: string, text: string) => fireEvent.changeText(screen.getByTestId(id), text);
 const doc = () => profile.getState().onboarding;
 const flush = () => act(async () => new Promise((r) => setTimeout(r, 0)));
-const wait = (ms: number) => act(async () => new Promise((r) => setTimeout(r, ms)));
 /** Mirrors the screen's double-tap guard. */
 const TAP_GAP_MS = 220;
 
@@ -321,6 +320,7 @@ describe('consent', () => {
 });
 
 describe('hatch', () => {
+  // Waits on the real hatch timer, so it gets more than jest's 5 s default under load.
   it('hatches on the third tap, with feedback, then needs a name', async () => {
     await set(answeredUpTo('hatch'));
     await set((d) => ({ ...d, crocHatched: false, crocName: null }));
@@ -328,23 +328,33 @@ describe('hatch', () => {
     expect(screen.getByTestId('hatch-hint')).toHaveTextContent('Tap the egg 3 times');
     expect(screen.queryByTestId('croc-name')).toBeNull();
 
-    await press('hatch-egg');
-    expect(screen.getByTestId('hatch-hint')).toHaveTextContent('2 more taps');
-    // A bounce right after a tap is not a second tap.
-    await press('hatch-egg');
-    expect(screen.getByTestId('hatch-hint')).toHaveTextContent('2 more taps');
-    await wait(TAP_GAP_MS + 30);
-    await press('hatch-egg');
-    expect(screen.getByTestId('hatch-hint')).toHaveTextContent('One more tap');
-    await wait(TAP_GAP_MS + 30);
-    await press('hatch-egg');
-    expect(doc().crocHatched).toBe(true);
-    expect(screen.getByTestId('hatch-hatchling')).toBeOnTheScreen();
-    expect(haptics).toEqual(['tap', 'tap', 'success']);
-    expect(sounds).toEqual(['tap', 'tap', 'hatch']);
-    // Taps after the hatch do nothing.
-    await press('hatch-egg');
-    expect(haptics).toHaveLength(3);
+    // The tap guard reads Date.now(); drive it by hand so load on the machine cannot turn a
+    // "bounce" into a second tap or a deliberate gap into a bounce.
+    let clock = 1_000_000;
+    const nowSpy = jest.spyOn(Date, 'now').mockImplementation(() => clock);
+    try {
+      await press('hatch-egg');
+      expect(screen.getByTestId('hatch-hint')).toHaveTextContent('2 more taps');
+      // A bounce right after a tap is not a second tap.
+      clock += 10;
+      await press('hatch-egg');
+      expect(screen.getByTestId('hatch-hint')).toHaveTextContent('2 more taps');
+      clock += TAP_GAP_MS + 30;
+      await press('hatch-egg');
+      expect(screen.getByTestId('hatch-hint')).toHaveTextContent('One more tap');
+      clock += TAP_GAP_MS + 30;
+      await press('hatch-egg');
+      expect(doc().crocHatched).toBe(true);
+      expect(screen.getByTestId('hatch-hatchling')).toBeOnTheScreen();
+      expect(haptics).toEqual(['tap', 'tap', 'success']);
+      expect(sounds).toEqual(['tap', 'tap', 'hatch']);
+      // Taps after the hatch do nothing.
+      clock += TAP_GAP_MS + 30;
+      await press('hatch-egg');
+      expect(haptics).toHaveLength(3);
+    } finally {
+      nowSpy.mockRestore();
+    }
 
     // The name form arrives once the hatchling has settled.
     await waitFor(() => expect(screen.getByTestId('croc-name')).toBeOnTheScreen(), {
@@ -363,7 +373,7 @@ describe('hatch', () => {
     expect(doc().crocName).toBe('Zé 🐊');
     expect(profile.getState().settings.crocName).toBe('Zé 🐊');
     expect(mockRouter.push).toHaveBeenCalledWith('/onboarding/first-session');
-  });
+  }, 20_000);
 
   it('revisited after hatching, the hatchling and the name are simply there', async () => {
     await set(answeredUpTo('firstSession'));

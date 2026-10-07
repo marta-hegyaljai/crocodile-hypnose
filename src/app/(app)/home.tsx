@@ -7,6 +7,7 @@ import { t } from '@/copy';
 import type { StopView, TodaysSession } from '@/content/journey';
 import { localContent } from '@/content/repository';
 import { gameIdOfStop } from '@/features/games/catalog';
+import { InactiveGuard } from '@/features/layout/InactiveGuard';
 import { useTapShield } from '@/features/layout/TapShield';
 import { HomeCelebrations } from '@/features/habitat/HomeCelebrations';
 import { HomeHeader } from '@/features/home/HomeHeader';
@@ -66,50 +67,52 @@ export default function HomeScreen() {
   const selectedZone = selected ? localContent.zone(selected.stop.zoneId) : undefined;
 
   return (
-    <View style={[styles.root, { backgroundColor: colors.background }]} testID="home-screen">
-      <View
-        style={[
-          styles.top,
-          compact && styles.topCompact,
-          { paddingTop: insets.top + (compact ? space.xs : space.sm) },
-        ]}
-      >
-        <HomeHeader crocName={crocName} />
-        <Text
-          variant={compact ? 'subheading' : 'heading'}
-          heading
-          numberOfLines={1}
-          placeholder
-          testID="home-greeting"
+    <InactiveGuard>
+      <View style={[styles.root, { backgroundColor: colors.background }]} testID="home-screen">
+        <View
+          style={[
+            styles.top,
+            compact && styles.topCompact,
+            { paddingTop: insets.top + (compact ? space.xs : space.sm) },
+          ]}
         >
-          {t('home.greeting', { name })}
-        </Text>
-        <TodayCard today={today} onPlay={onPlay} compact={compact} />
-        {pendingOffline ? (
-          <Text variant="caption" tone="secondary" testID="home-sync-pending">
-            {t('home.syncPending')}
+          <HomeHeader crocName={crocName} />
+          <Text
+            variant={compact ? 'subheading' : 'heading'}
+            heading
+            numberOfLines={1}
+            placeholder
+            testID="home-greeting"
+          >
+            {t('home.greeting', { name })}
           </Text>
-        ) : null}
+          <TodayCard today={today} onPlay={onPlay} compact={compact} />
+          {pendingOffline ? (
+            <Text variant="caption" tone="secondary" testID="home-sync-pending">
+              {t('home.syncPending')}
+            </Text>
+          ) : null}
+        </View>
+        <RiverMap
+          journey={journey}
+          currentStopId={today?.stop.id ?? null}
+          crocName={crocName}
+          crocStage={crocStage}
+          onStopPress={setSelected}
+          bottomInset={space.xl}
+          active={focused}
+          testID="river-map"
+        />
+        <StopSheet
+          view={selected}
+          zoneTitle={selectedZone ? t(selectedZone.titleKey) : ''}
+          current={!!selected && selected.stop.id === today?.stop.id}
+          onStart={onSheetStart}
+          onClose={closeSheet}
+        />
+        <HomeCelebrations crocName={crocName} active={focused && !selected} />
       </View>
-      <RiverMap
-        journey={journey}
-        currentStopId={today?.stop.id ?? null}
-        crocName={crocName}
-        crocStage={crocStage}
-        onStopPress={setSelected}
-        bottomInset={space.xl}
-        active={focused}
-        testID="river-map"
-      />
-      <StopSheet
-        view={selected}
-        zoneTitle={selectedZone ? t(selectedZone.titleKey) : ''}
-        current={!!selected && selected.stop.id === today?.stop.id}
-        onStart={onSheetStart}
-        onClose={closeSheet}
-      />
-      <HomeCelebrations crocName={crocName} active={focused && !selected} />
-    </View>
+    </InactiveGuard>
   );
 }
 

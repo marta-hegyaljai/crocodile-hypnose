@@ -42,6 +42,10 @@ export function BreathingGame({ running, ended, onFinish, crocName }: GameProps)
   const [breaths, setBreaths] = useState(0);
   const [ripples, setRipples] = useState<number[]>([]);
   const time = useRef(0);
+  // For the screen reader and the keyboard: is a breath in progress (see the water's button).
+  const [holding, setHolding] = useState(false);
+  /** The last press started from a pointer or a key (so the click that follows is not a toggle). */
+  const pressed = useRef(false);
 
   /** 0 exhaled .. 1 inhaled, following the finger. */
   const fill = useSharedValue(0.2);
@@ -72,6 +76,7 @@ export function BreathingGame({ running, ended, onFinish, crocName }: GameProps)
   const press = () => {
     if (!running || finished.current) return;
     counter.current.press(time.current);
+    setHolding(true);
     const d = reducedMotion ? 0 : HALF;
     fill.value = withTiming(1, { duration: d, easing: Easing.inOut(Easing.sin) });
     crocLift.value = withTiming(-14, { duration: d, easing: Easing.inOut(Easing.sin) });
@@ -79,6 +84,7 @@ export function BreathingGame({ running, ended, onFinish, crocName }: GameProps)
   const release = () => {
     if (finished.current) return;
     const complete = counter.current.release(time.current);
+    setHolding(false);
     const d = reducedMotion ? 0 : HALF;
     fill.value = withTiming(0.2, { duration: d, easing: Easing.inOut(Easing.sin) });
     crocLift.value = withTiming(0, { duration: d, easing: Easing.inOut(Easing.sin) });
@@ -87,6 +93,18 @@ export function BreathingGame({ running, ended, onFinish, crocName }: GameProps)
       feedback.haptic('select');
       setRipples((r) => [...r.slice(-3), Date.now() + Math.random()]);
     }
+  };
+  /**
+   * Holding is not possible with a screen reader (it activates, it does not press and hold): a
+   * plain activation of the water, with no press before it, toggles breathing in and out.
+   */
+  const activate = () => {
+    if (pressed.current) {
+      pressed.current = false;
+      return;
+    }
+    if (counter.current.holding()) release();
+    else press();
   };
   // The finger is still down when the game pauses or ends: breathe out.
   useEffect(() => {
@@ -174,6 +192,7 @@ export function BreathingGame({ running, ended, onFinish, crocName }: GameProps)
             <View
               style={[styles.cue, { top: insets.top + space.xxxl + space.lg }]}
               pointerEvents="none"
+              accessibilityLiveRegion="polite"
             >
               <Text variant="subheading" tone="secondary" align="center" testID="breathing-cue">
                 {inhale ? t('games.breathing.holdIn') : t('games.breathing.releaseOut')}
@@ -191,10 +210,19 @@ export function BreathingGame({ running, ended, onFinish, crocName }: GameProps)
       {running ? (
         <Pressable
           style={[styles.water, { top: waterY, bottom: 0 }]}
-          onPressIn={press}
-          onPressOut={release}
+          onPressIn={() => {
+            pressed.current = true;
+            press();
+          }}
+          onPressOut={() => {
+            // A pointer or key press ends here; the click that follows must not toggle again.
+            release();
+          }}
+          onPress={activate}
           accessibilityRole="button"
           accessibilityLabel={t('games.breathing.a11yWater')}
+          accessibilityState={{ selected: holding }}
+          aria-pressed={holding}
           testID="breathing-water"
         />
       ) : null}

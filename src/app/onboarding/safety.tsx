@@ -11,7 +11,7 @@ import { useOnboardingActions, useStepScreen } from '@/features/onboarding/useOn
 import { useFeedback } from '@/services/feedback';
 import { SAFETY_QUESTION_COUNT } from '@/services/profile/types';
 import { radius, space, useTheme } from '@/theme';
-import { Button, Card, Icon, Text } from '@/ui';
+import { Button, Card, Icon, RadioGroup, Text } from '@/ui';
 
 const QUESTION_KEYS: CopyKey[] = [
   'onboarding.safety.questions.1',
@@ -117,14 +117,10 @@ export default function SafetyScreen() {
       }
     >
       {QUESTION_KEYS.map((key, i) => (
-        <View
+        <RadioGroup
           key={key}
+          label={t('onboarding.safety.a11yQuestion', { n: i + 1, total: SAFETY_QUESTION_COUNT })}
           style={styles.question}
-          accessibilityRole="radiogroup"
-          accessibilityLabel={t('onboarding.safety.a11yQuestion', {
-            n: i + 1,
-            total: SAFETY_QUESTION_COUNT,
-          })}
         >
           <Text variant="bodyStrong" testID={`safety-question-${i + 1}`}>
             {t(key)}
@@ -147,7 +143,7 @@ export default function SafetyScreen() {
               testID={`safety-${i + 1}-no`}
             />
           </View>
-        </View>
+        </RadioGroup>
       ))}
       <View style={[styles.privacy, { backgroundColor: colors.surfaceRaised }]}>
         <Icon name="lock" size={18} color={colors.textSecondary} />

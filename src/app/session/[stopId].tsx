@@ -11,6 +11,7 @@ import type { Stop } from '@/content/types';
 import { NewScales, useNewBadges } from '@/features/habitat/RewardExtras';
 import { effectiveCautionMode, useJourney } from '@/features/home/useJourney';
 import { LagoonSheetScreen } from '@/features/layout/LagoonSheetScreen';
+import { useTapShield } from '@/features/layout/TapShield';
 import { durationLabel, typeLabel } from '@/features/map/stopLabels';
 import { AudioPlayer } from '@/features/session/AudioPlayer';
 import { completeSession, type Completion } from '@/features/session/completion';
@@ -22,6 +23,7 @@ import {
   type Dive,
   type NightLayout,
 } from '@/features/session/NightRiver';
+import { createPendingRewardStore, type PendingReward } from '@/features/session/pendingReward';
 import { canResume, createResumeStore, type ResumePoint } from '@/features/session/resume';
 import { MoodStep, RewardSheet, useRewardHop } from '@/features/session/SessionDay';
 import { announceUnlocked } from '@/features/session/unlock';
@@ -40,6 +42,7 @@ import { space } from '@/theme';
 import { Button, IconButton, Notice, Text } from '@/ui';
 
 const resumeStore = createResumeStore(appStorage);
+const rewardStore = createPendingRewardStore(appStorage);
 const back = () => (router.canGoBack() ? router.back() : router.replace('/home'));
 /** How often the place to resume is saved while a session plays. */
 const SAVE_EVERY_MS = 3000;
@@ -72,6 +75,7 @@ export default function SessionScreen() {
     s.settingsKnown ? s.settings.moodConsent : s.onboarding.moodConsent === true,
   );
   const feedback = useFeedback();
+  const shield = useTapShield();
   const crocStage = useGrowthStage();
   const newBadges = useNewBadges();
   const layout = useNightLayout();
@@ -103,6 +107,10 @@ export default function SessionScreen() {
   const [moodAfter, setMoodAfter] = useState<MoodValue | null>(null);
   const [completion, setCompletion] = useState<Completion | null>(null);
   const phaseRef = useRef<Phase>('intro');
+  /** The run whose completion was counted (declared early: the restore effect sets it). */
+  const completedRun = useRef<string | null>(null);
+  /** The reward kept on this device while its moment has not been continued from. */
+  const pendingRef = useRef<PendingReward | null>(null);
   useEffect(() => {
     phaseRef.current = phase;
   }, [phase]);
@@ -119,6 +127,29 @@ export default function SessionScreen() {
     return () => {
       live = false;
     };
+  }, [userId, stopId]);
+
+  // A reward the user did not get to see (reload between "done" and the reward screen): points
+  // are already saved, so the moment comes back on return, until the user continues from it.
+  useEffect(() => {
+    if (!userId || !stopId) return;
+    let live = true;
+    void rewardStore.get(userId, stopId, Date.now()).then((pending) => {
+      if (!live || !pending || phaseRef.current !== 'intro') return;
+      completedRun.current = pending.completion.event.id;
+      setCompletion(pending.completion);
+      setOutcome('finished');
+      const next = pending.phase === 'moodAfter' && consent ? 'moodAfter' : 'reward';
+      pendingRef.current = pending;
+      phaseRef.current = next;
+      setMoodAfter(null);
+      setPhase(next);
+    });
+    return () => {
+      live = false;
+    };
+    // Once per stop and user: a later consent change must not replay it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, stopId]);
 
   const length = !media
@@ -143,6 +174,7 @@ export default function SessionScreen() {
       ? { id: from.runId, startAt: from.position, coverage: from.coverage }
       : { id: newEventId(), startAt: 0, coverage: [] };
     phaseRef.current = 'sinking';
+    if (userId) void rewardStore.clear(userId);
     setRun(next);
     setOutcome(null);
     void profile.getState().updateProgress((d) => markStarted(d, stop.id, Date.now()));
@@ -180,7 +212,6 @@ export default function SessionScreen() {
   };
 
   /** Finishing counts once per run, whatever calls it (the track's end, ending at 95 %, dev). */
-  const completedRun = useRef<string | null>(null);
   const complete = (runId: string): Completion | null => {
     if (!stop || !userId || completedRun.current === runId) return null;
     completedRun.current = runId;
@@ -199,10 +230,23 @@ export default function SessionScreen() {
     void resumeStore.clear(userId, stop.id);
     setResume(null);
     setCompletion(done);
+    const pending: PendingReward = {
+      stopId: stop.id,
+      completion: done,
+      savedAt: now,
+      phase: consent ? 'moodAfter' : 'reward',
+    };
+    pendingRef.current = pending;
+    void rewardStore.save(userId, pending);
     return done;
   };
 
   const showReward = () => {
+    // A reload from here on comes back to the reward, not the mood check.
+    if (userId && pendingRef.current) {
+      pendingRef.current = { ...pendingRef.current, phase: 'reward' };
+      void rewardStore.save(userId, pendingRef.current);
+    }
     setPhase('reward');
     feedback.sound('hatch');
     feedback.haptic('success');
@@ -238,6 +282,9 @@ export default function SessionScreen() {
 
   const leave = () => {
     if (completion) announceUnlocked(completion.unlocked);
+    if (userId) void rewardStore.clear(userId);
+    // The map's tab bar sits under this button: swallow the rest of a double tap.
+    shield();
     back();
   };
 
@@ -293,7 +340,8 @@ export default function SessionScreen() {
             onChange={setMoodAfter}
             before={moodBefore}
             onContinue={() => {
-              if (run) recordMood('after', moodAfter, run.id);
+              const runId = run?.id ?? completion?.event.id;
+              if (runId) recordMood('after', moodAfter, runId);
               showReward();
             }}
             onSkip={showReward}

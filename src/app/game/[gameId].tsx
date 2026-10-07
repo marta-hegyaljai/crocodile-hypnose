@@ -19,11 +19,12 @@ import {
 } from '@/features/games';
 import { GameReward } from '@/features/habitat/RewardExtras';
 import { useJourney } from '@/features/home/useJourney';
+import { useTapShield } from '@/features/layout/TapShield';
 import { useAuth } from '@/services/auth';
 import { newEventId } from '@/services/events/types';
 import { GAME_POINTS } from '@/services/gamification';
 import { useProfile, useProfileStore } from '@/services/profile';
-import { markDone, markStarted } from '@/services/progress/mergeProgress';
+import { markDone } from '@/services/progress/mergeProgress';
 import { space } from '@/theme';
 import { Button, Screen, Text } from '@/ui';
 
@@ -38,7 +39,9 @@ const back = () => (router.canGoBack() ? router.back() : router.replace('/games'
 /**
  * A mini-game, opened from the games clearing (`/game/firefly`) or from a map stop of type
  * `game` (`/game/firefly?stopId=sleep-7`). Playing it through records the play on this device
- * and, for a stop, marks that stop done; the reward moment is wired in by the sessions step.
+ * and, for a stop, marks that stop done. A game has no middle to resume, so starting one and
+ * quitting leaves its stop exactly as it was (not "Started"); a round with no play in it (no
+ * breaths, never resting a finger) does not count either.
  */
 export default function GameScreen() {
   const insets = useSafeAreaInsets();
@@ -57,9 +60,12 @@ export default function GameScreen() {
     !!view &&
     (view.status === 'available' || view.status === 'inProgress' || view.status === 'done');
 
-  const onStarted = useCallback(() => {
-    if (stopPlayable && stopId) void updateProgress((doc) => markStarted(doc, stopId, Date.now()));
-  }, [stopPlayable, stopId, updateProgress]);
+  const shield = useTapShield();
+  // Leaving lands on a tab bar under the button: swallow the rest of a double tap.
+  const leave = useCallback(() => {
+    shield();
+    back();
+  }, [shield]);
 
   /**
    * The single integration point: a game was played through. It is recorded on this device (best
@@ -107,9 +113,8 @@ export default function GameScreen() {
       crocName={crocName}
       resultLabel={resultLabel}
       reward={<GameReward points={GAME_POINTS} />}
-      onStarted={onStarted}
       onGameCompleted={onGameCompleted}
-      onLeave={back}
+      onLeave={leave}
       Game={GAME_SCREENS[game.id]}
     />
   );

@@ -95,6 +95,7 @@ export const en = {
       quitNote: 'You can leave any time. Nothing is lost.',
       back: 'Back',
       endTitle: ph('[Game finished]'), // PLACEHOLDER
+      notEnough: ph('[Not enough play to count this round: try it again]'), // PLACEHOLDER
       eyesClosed: ph('[Invitation: now try it once more with your eyes closed]'), // PLACEHOLDER
       playAgain: 'Play again',
       done: 'Done',
@@ -120,7 +121,8 @@ export const en = {
     breathing: {
       holdIn: ph('Hold: breathe in'), // PLACEHOLDER
       releaseOut: ph('Let go: breathe out'), // PLACEHOLDER
-      a11yWater: 'The water. Press and hold to breathe in, release to breathe out.',
+      a11yWater:
+        'The water. Press and hold to breathe in, release to breathe out. With a screen reader, activate once to breathe in and again to breathe out.',
     },
   },
   mood: {

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import React from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
@@ -22,7 +22,7 @@ import { createFakeGamificationClient, type FakeGamificationClient } from '@/tes
 import { createFakeProfileClient } from '@/test/fakeProfile';
 import { AtmosphereProvider } from '@/theme';
 
-import { HomeCelebrations } from './HomeCelebrations';
+import { HomeCelebrations, WEEKLY_TOAST_MS } from './HomeCelebrations';
 
 const metrics = {
   frame: { x: 0, y: 0, width: 390, height: 844 },
@@ -94,5 +94,68 @@ describe('home celebrations', () => {
     server.addSeconds(31 * 60);
     await show(<HomeCelebrations crocName="Zé" active={false} />);
     expect(screen.queryByTestId('growth-moment')).toBeNull();
+  });
+
+  describe('weekly goal card', () => {
+    // A Thursday, so Monday to Wednesday are three days of the same week whatever day it is.
+    const THURSDAY = Date.UTC(2026, 9, 8, 12);
+    const DAY = 24 * 3600_000;
+    beforeEach(() => {
+      jest.spyOn(Date, 'now').mockReturnValue(THURSDAY);
+    });
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
+    async function reachGoal() {
+      await store.getState().setWeeklyTarget(3);
+      for (let i = 1; i <= 3; i++) {
+        await profile.getState().recordSession({
+          id: `run-0000000${i}`,
+          type: 'sessionCompleted',
+          stopId: `intro-${i}`,
+          stopType: 'audio',
+          at: THURSDAY - i * DAY,
+          firstTime: true,
+        });
+      }
+    }
+
+    it('shows once, is marked as celebrated at once (a reload does not bring it back)', async () => {
+      await show(<HomeCelebrations crocName="Zé" active />);
+      await reachGoal();
+      await waitFor(() => expect(screen.getByTestId('weekly-reached')).toBeTruthy());
+      await waitFor(() => expect(store.getState().goal.celebratedWeek).not.toBeNull());
+      fireEvent.press(screen.getByTestId('weekly-reached-close'));
+      await waitFor(() => expect(screen.queryByTestId('weekly-reached')).toBeNull());
+    });
+
+    it('does not come back on the next visit once celebrated', async () => {
+      await show(<HomeCelebrations crocName="Zé" active />);
+      await reachGoal();
+      await waitFor(() => expect(screen.getByTestId('weekly-reached')).toBeTruthy());
+      await waitFor(() => expect(store.getState().goal.celebratedWeek).not.toBeNull());
+      screen.unmount();
+      await show(<HomeCelebrations crocName="Zé" active />);
+      expect(screen.queryByTestId('weekly-reached')).toBeNull();
+    });
+
+    it('goes by itself after a few seconds', async () => {
+      jest.useFakeTimers();
+      try {
+        await show(<HomeCelebrations crocName="Zé" active />);
+        await reachGoal();
+        await act(async () => {
+          await jest.advanceTimersByTimeAsync(100);
+        });
+        expect(screen.getByTestId('weekly-reached')).toBeTruthy();
+        await act(async () => {
+          await jest.advanceTimersByTimeAsync(WEEKLY_TOAST_MS + 100);
+        });
+        expect(screen.queryByTestId('weekly-reached')).toBeNull();
+      } finally {
+        jest.useRealTimers();
+      }
+    });
   });
 });

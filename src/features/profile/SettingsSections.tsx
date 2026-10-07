@@ -9,7 +9,7 @@ import { useProfile } from '@/services/profile';
 import type { SessionLength } from '@/services/profile/types';
 import { reminders } from '@/services/reminders/reminders';
 import { space } from '@/theme';
-import { Text, TextField, ToggleRow } from '@/ui';
+import { RadioGroup, Text, TextField, ToggleRow } from '@/ui';
 
 import { Rows, Section } from './Section';
 import { isValidTime, setReminderEnabled, setReminderTime, timeOfDayOf } from './settingsLogic';
@@ -43,7 +43,7 @@ export function ReminderSettings() {
       />
       {reminder.enabled ? (
         <View style={styles.group}>
-          <View style={styles.row} accessibilityRole="radiogroup" accessibilityLabel={t('profile.reminderTimeLabel')}>
+          <RadioGroup label={t('profile.reminderTimeLabel')} style={styles.row}>
             <ChoiceCard
               role="radio"
               label={t('profile.reminderMorning')}
@@ -62,7 +62,7 @@ export function ReminderSettings() {
               style={styles.half}
               testID="reminder-evening"
             />
-          </View>
+          </RadioGroup>
           <TextField
             label={t('profile.reminderTimeLabel')}
             hint={t('profile.reminderTimeHint')}
@@ -122,11 +122,7 @@ export function PreferenceSettings() {
         </Rows>
       </Section>
       <Section title={t('profile.lengthTitle')}>
-        <View
-          style={styles.column}
-          accessibilityRole="radiogroup"
-          accessibilityLabel={t('profile.lengthTitle')}
-        >
+        <RadioGroup label={t('profile.lengthTitle')} style={styles.column}>
           {lengths.map((l) => (
             <ChoiceCard
               key={l.value}
@@ -141,14 +137,10 @@ export function PreferenceSettings() {
               testID={`setting-length-${l.value}`}
             />
           ))}
-        </View>
+        </RadioGroup>
       </Section>
       <Section title={t('profile.motionTitle')}>
-        <View
-          style={styles.column}
-          accessibilityRole="radiogroup"
-          accessibilityLabel={t('profile.motionTitle')}
-        >
+        <RadioGroup label={t('profile.motionTitle')} style={styles.column}>
           {motions.map((m) => (
             <ChoiceCard
               key={m.id}
@@ -165,7 +157,7 @@ export function PreferenceSettings() {
               testID={`setting-motion-${m.id}`}
             />
           ))}
-        </View>
+        </RadioGroup>
       </Section>
     </>
   );

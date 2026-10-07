@@ -6,9 +6,9 @@ import { t } from '@/copy';
 import { durationLabel } from '@/features/map/stopLabels';
 import { useFeedback } from '@/services/feedback';
 import { AtmosphereProvider, palette, radius, space, useTheme, withAlpha } from '@/theme';
-import { Button, Chip, Icon, IconButton, Reveal, Screen, Text } from '@/ui';
+import { Button, Chip, Icon, IconButton, Reveal, Screen, Text, useDialog } from '@/ui';
 
-import type { GameDef, GameResult } from './catalog';
+import { isEngaged, type GameDef, type GameResult } from './catalog';
 import { GAME_ICONS, GAME_TINTS } from './gameArt';
 
 export type GamePhase = 'intro' | 'playing' | 'paused' | 'ended';
@@ -34,8 +34,6 @@ export interface GameShellProps {
   reward?: React.ReactNode;
   /** Called the moment a game is played through (never on a quit). */
   onGameCompleted: (result: GameResult) => void;
-  /** The first time the user starts the game on this screen. */
-  onStarted?: () => void;
   /** Leave the screen (back to where the game was opened). */
   onLeave: () => void;
   testID?: string;
@@ -62,7 +60,6 @@ function ShellBody({
   resultLabel,
   reward,
   onGameCompleted,
-  onStarted,
   onLeave,
   testID = 'game-screen',
 }: GameShellProps) {
@@ -72,9 +69,10 @@ function ShellBody({
   const feedback = useFeedback();
   const [phase, setPhase] = useState<GamePhase>('intro');
   const [result, setResult] = useState<GameResult | null>(null);
+  /** The round that just ended had real play in it (an idle one is not counted). */
+  const [counted, setCounted] = useState(true);
   // A new round remounts the game so it starts clean.
   const [round, setRound] = useState(0);
-  const started = useRef(false);
   const phaseRef = useRef(phase);
   useEffect(() => {
     phaseRef.current = phase;
@@ -82,15 +80,11 @@ function ShellBody({
 
   const start = useCallback(() => {
     if (phaseRef.current !== 'intro' && phaseRef.current !== 'ended') return;
-    if (!started.current) {
-      started.current = true;
-      onStarted?.();
-    }
     feedback.haptic('select');
     setResult(null);
     setRound((r) => r + 1);
     setPhase('playing');
-  }, [feedback, onStarted]);
+  }, [feedback]);
 
   const finish = useCallback(
     (r: GameResult) => {
@@ -98,7 +92,12 @@ function ShellBody({
       // Set now, not after the render: a second finish in the same tick is ignored.
       phaseRef.current = 'ended';
       setResult(r);
+      const real = isEngaged(r);
+      setCounted(real);
       setPhase('ended');
+      // A round with no play in it (no breaths, never resting a finger) runs to its end but is
+      // not recorded, earns nothing and does not complete a stop.
+      if (!real) return;
       feedback.haptic('success');
       onGameCompleted(r);
     },
@@ -112,6 +111,13 @@ function ShellBody({
     });
     return () => sub.remove();
   }, []);
+
+  // The pause card keeps focus (Tab wraps inside it) and Escape is "keep going".
+  const { ref: pauseDialogRef, props: pauseDialogProps } = useDialog({
+    onClose: phase === 'paused' ? () => setPhase('playing') : undefined,
+    trap: true,
+    autoFocus: phase === 'paused',
+  });
 
   const night = atmosphere === 'night';
   const short = height < 700;
@@ -225,7 +231,16 @@ function ShellBody({
       ) : null}
 
       {phase === 'paused' ? (
-        <View style={[styles.overlay, { backgroundColor: colors.overlay }]} testID="game-paused">
+        <View
+          ref={pauseDialogRef}
+          {...pauseDialogProps}
+          accessibilityViewIsModal
+          aria-modal
+          role="dialog"
+          aria-label={t('games.shell.paused')}
+          style={[styles.overlay, { backgroundColor: colors.overlay }]}
+          testID="game-paused"
+        >
           <Reveal style={styles.dialogWrap}>
             <View
               style={[
@@ -278,28 +293,36 @@ function ShellBody({
               ]}
               testID="game-end"
             >
-              <View style={styles.titleRow}>
-                <View style={[styles.badge, { backgroundColor: tint.bg }]}>
-                  <Icon name="check" size={24} color={tint.fg} />
-                </View>
-                <View style={styles.titleText}>
-                  <Text variant="label" tone="secondary">
-                    {t('games.shell.endTitle')}
+              {counted ? (
+                <>
+                  <View style={styles.titleRow}>
+                    <View style={[styles.badge, { backgroundColor: tint.bg }]}>
+                      <Icon name="check" size={24} color={tint.fg} />
+                    </View>
+                    <View style={styles.titleText}>
+                      <Text variant="label" tone="secondary">
+                        {t('games.shell.endTitle')}
+                      </Text>
+                      <Text
+                        variant={short ? 'heading' : 'title'}
+                        heading
+                        color={colors.textAccent}
+                        testID="game-result"
+                      >
+                        {resultLabel(result)}
+                      </Text>
+                    </View>
+                  </View>
+                  {reward}
+                  <Text variant="body" tone="secondary" testID="game-eyes-closed">
+                    {t('games.shell.eyesClosed')}
                   </Text>
-                  <Text
-                    variant={short ? 'heading' : 'title'}
-                    heading
-                    color={colors.textAccent}
-                    testID="game-result"
-                  >
-                    {resultLabel(result)}
-                  </Text>
-                </View>
-              </View>
-              {reward}
-              <Text variant="body" tone="secondary" testID="game-eyes-closed">
-                {t('games.shell.eyesClosed')}
-              </Text>
+                </>
+              ) : (
+                <Text variant="body" tone="secondary" testID="game-not-counted">
+                  {t('games.shell.notEnough')}
+                </Text>
+              )}
               <View style={short ? styles.actionsRow : styles.actions}>
                 <View style={short ? styles.actionFlex : undefined}>
                   <Button
@@ -371,6 +394,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: space.xl,
+    // Focus lands here only by script (tabIndex -1): no browser outline.
+    ...({ outlineWidth: 0 } as object),
   },
   dialogWrap: { width: '100%', maxWidth: 400 },
   dialog: { borderRadius: radius.lg, borderWidth: 1, padding: space.xl, gap: space.md },

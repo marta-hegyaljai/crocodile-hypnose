@@ -7,7 +7,7 @@ import { cautionMode } from '@/features/onboarding/flow';
 import { useProfile } from '@/services/profile';
 import { SAFETY_QUESTION_COUNT, type SafetyAnswers } from '@/services/profile/types';
 import { space } from '@/theme';
-import { Button, Card, Notice, Text } from '@/ui';
+import { Button, Card, Notice, RadioGroup, Text } from '@/ui';
 
 import { setSafetyAnswers } from './settingsLogic';
 
@@ -94,14 +94,10 @@ export function SafetyRetake() {
         {t('help.retakeIntro')}
       </Text>
       {QUESTION_KEYS.map((key, i) => (
-        <View
+        <RadioGroup
           key={key}
+          label={t('onboarding.safety.a11yQuestion', { n: i + 1, total: SAFETY_QUESTION_COUNT })}
           style={styles.stack}
-          accessibilityRole="radiogroup"
-          accessibilityLabel={t('onboarding.safety.a11yQuestion', {
-            n: i + 1,
-            total: SAFETY_QUESTION_COUNT,
-          })}
         >
           <Text variant="bodyStrong">{t(key)}</Text>
           <View style={styles.row}>
@@ -122,7 +118,7 @@ export function SafetyRetake() {
               testID={`retake-${i + 1}-no`}
             />
           </View>
-        </View>
+        </RadioGroup>
       ))}
       <Button
         label={t('help.retakeSave')}

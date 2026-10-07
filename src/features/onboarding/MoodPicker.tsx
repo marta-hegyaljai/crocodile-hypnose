@@ -1,11 +1,11 @@
 import React from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
 import { t } from '@/copy';
 import type { MoodValue } from '@/services/profile/types';
 import { radius, space, tapTarget, useTheme } from '@/theme';
-import { FocusRing, Text, spaceActivates } from '@/ui';
+import { FocusRing, RadioGroup, Text, spaceActivates } from '@/ui';
 import { noNativeOutline } from '@/ui/FocusRing';
 import { useFocusRing } from '@/ui/useFocusRing';
 
@@ -101,12 +101,7 @@ function MoodOption({
 /** Five water states from still to rough, with placeholder labels. One can be picked. */
 export function MoodPicker({ value, onChange, testID }: MoodPickerProps) {
   return (
-    <View
-      style={styles.row}
-      accessibilityRole="radiogroup"
-      accessibilityLabel={t('mood.question')}
-      testID={testID}
-    >
+    <RadioGroup label={t('mood.question')} style={styles.row} testID={testID}>
       {MOODS.map((mood) => (
         <MoodOption
           key={mood}
@@ -116,7 +111,7 @@ export function MoodPicker({ value, onChange, testID }: MoodPickerProps) {
           testID={testID ? `${testID}-${mood}` : undefined}
         />
       ))}
-    </View>
+    </RadioGroup>
   );
 }
 

@@ -202,6 +202,46 @@ test.describe('sessions', () => {
     expect(errors).toEqual([]);
   });
 
+  test('a reload on the mood or reward screen brings the reward back; a double tap on Continue stays on the map', async ({
+    page,
+    request,
+  }, info) => {
+    const errors = collectErrors(page);
+    await onHome(page, request, uniqueEmail(info, 'reload'), {
+      moodConsent: true,
+      done: ['intro-1'],
+    });
+    await openStop(page, 'intro-2');
+    await page.getByTestId('session-start').click();
+    await page.getByTestId('mood-before-skip').click();
+    await expect(page.getByTestId('session-player')).toBeVisible();
+    await fastForward(page, 200);
+    await expect(page.getByTestId('session-mood-after')).toBeVisible({ timeout: 10_000 });
+
+    // The session is done and its points saved; a reload must not lose the after-mood and reward.
+    await page.reload();
+    await expect(page.getByTestId('session-mood-after')).toBeVisible({ timeout: 15_000 });
+    await page.getByTestId('mood-after-picker-4').click();
+    await page.getByTestId('mood-after-continue').click();
+    await expect(page.getByTestId('session-reward-points')).toHaveText('+30 Points');
+    await page.reload();
+    await expect(page.getByTestId('session-reward-points')).toHaveText('+30 Points', {
+      timeout: 15_000,
+    });
+
+    // A double tap on Continue lands on the map; the second tap must not reach the tab bar.
+    await page.getByTestId('session-reward-continue').dblclick();
+    await expect(page.getByTestId('home-screen')).toBeVisible();
+    await page.waitForTimeout(700);
+    await expect(page.getByTestId('tab-home')).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByTestId('games-screen')).toBeHidden();
+
+    // Once continued, the reward is gone: reopening the stop shows the intro.
+    await openStop(page, 'intro-2');
+    await expect(page.getByTestId('session-reward')).toHaveCount(0);
+    expect(errors).toEqual([]);
+  });
+
   test('an interrupted session resumes where it stopped, and ending early does not finish it', async ({
     page,
     request,

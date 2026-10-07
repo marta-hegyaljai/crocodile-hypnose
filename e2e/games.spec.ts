@@ -125,7 +125,9 @@ test.describe('mini-games', () => {
     request,
   }, info) => {
     const errors = collectErrors(page);
-    const headers = await onHome(page, request, uniqueEmail(info, 'map'));
+    // A slower clock than the others: Stillness counts what a resting finger measures, and at 40x
+    // the pad appears with too little of the game left to measure.
+    const headers = await onHome(page, request, uniqueEmail(info, 'map'), 10);
     await expect(page.getByTestId('today-title')).toHaveText('Sleep · Stop 3');
 
     // Sleep · Stop 3 is a game: it opens the game, not the session player.
@@ -135,19 +137,26 @@ test.describe('mini-games', () => {
     await expect(page.getByTestId('game-intro-title')).toHaveText('Stillness');
     await expect(page.getByTestId('stillness-game')).toBeVisible();
 
-    // Start, then leave through the pause: the stop is started, never finished.
+    // Start, then leave through the pause: the stop is untouched (a game has no middle to resume).
     await page.getByTestId('game-start').click();
     await expect(page.getByTestId('stillness-pad')).toBeVisible({ timeout: 8000 });
     await page.getByTestId('game-pause').click();
     await expect(page.getByTestId('game-paused')).toBeVisible();
     await page.getByTestId('game-quit').click();
     await expect(page.getByTestId('home-screen')).toBeVisible();
-    await expect.poll(() => label(page, 'sleep-3')).toContain('Started');
     await expect(page.getByTestId('today-title')).toHaveText('Sleep · Stop 3');
+    expect(await label(page, 'sleep-3')).not.toContain('Started');
+    expect(await label(page, 'sleep-3')).not.toContain('Done');
 
-    // Play it through from today's card: a finger resting on the lily pad until the end.
+    // Left idle (a finger never rests on the pad) the game runs to its end but does not count.
     await page.getByTestId('today-play').click();
     await page.getByTestId('game-start').click();
+    await expect(page.getByTestId('game-end')).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByTestId('game-not-counted')).toBeVisible();
+    await expect(page.getByTestId('game-result')).toHaveCount(0);
+
+    // Play it through: a finger resting on the lily pad until the end.
+    await page.getByTestId('game-play-again').click();
     await expect(page.getByTestId('stillness-pad')).toBeVisible({ timeout: 8000 });
     await expect(page.getByTestId('stillness-cue')).toContainText('lily pad');
     const pad = await page.getByTestId('stillness-pad').boundingBox();
