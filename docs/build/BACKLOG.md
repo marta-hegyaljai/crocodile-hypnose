@@ -48,3 +48,7 @@
 | 5 | Review r1 | Keyboard focus on dimmed player controls doesn't reveal them. |
 | 6 | Review r1 | Stillness state not reset on pause/end; no native silence fallback to touch; route accepts any stop/game pairing; breathing guide ring at 10 Hz from JS; breathing hold has no screen-reader alternative; pause overlay doesn't trap focus; parseRecords doesn't validate best; no lifecycle/route tests. |
 | 3 | Review S06 | Flaky unit test: onboarding/screens.test.tsx "hatches on the third tap" fails intermittently under full-suite load. |
+| 8 | QA r1 | Consent off: no confirm, "deleted" note below the fold, says deleted while only queued offline. |
+| 8 | QA r1 | Reminder time: empty field gives no error. Email ellipsised in the header (matters before delete). |
+| 8 | QA r1 | Keyboard/SR: Tab continues into the inactive Home map; radio groups unnamed, no arrow keys; all section titles are h1; Escape doesn't close the delete confirmation. Export block is a small inner scroller. |
+| 8 | Review r1 | Older clients drop `reducedMotion` (needs settings v2 before release); ExportData not keyed on user; consent check vs purge interleave can leave one entry; no test for DELETE /me rate limit. |
