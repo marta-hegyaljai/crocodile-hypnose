@@ -52,3 +52,4 @@
 | 8 | QA r1 | Reminder time: empty field gives no error. Email ellipsised in the header (matters before delete). |
 | 8 | QA r1 | Keyboard/SR: Tab continues into the inactive Home map; radio groups unnamed, no arrow keys; all section titles are h1; Escape doesn't close the delete confirmation. Export block is a small inner scroller. |
 | 8 | Review r1 | Older clients drop `reducedMotion` (needs settings v2 before release); ExportData not keyed on user; consent check vs purge interleave can leave one entry; no test for DELETE /me rate limit. |
+| 8 | Review r2 | If the app is killed between the consent-off write and scrubMoods, the local mood log survives the restart (server already purged); scrub on load when resolved consent is off with a stamp > 0. |
