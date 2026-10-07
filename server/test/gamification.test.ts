@@ -367,6 +367,17 @@ describe('dev hooks and limits', () => {
     assert.equal((await req('POST', '/me/events', { events: [game('firefly')] })).statusCode, 429);
   });
 
+  test('reading the points and the habitat is rate limited', async () => {
+    await start({ readRateLimit: { max: 2, windowMs: 60_000 } });
+    assert.equal((await req('GET', '/me/points')).statusCode, 200);
+    assert.equal((await req('GET', '/me/points')).statusCode, 200);
+    const limited = await req('GET', '/me/points');
+    assert.equal(limited.statusCode, 429);
+    assert.equal(limited.json<{ error: { code: string } }>().error.code, 'rate_limited');
+    assert.ok(limited.headers['retry-after']);
+    assert.equal((await req('GET', '/me/habitat')).statusCode, 200);
+  });
+
   test('deleting the account removes the ledger', async () => {
     await start();
     await events(session('intro-1'));

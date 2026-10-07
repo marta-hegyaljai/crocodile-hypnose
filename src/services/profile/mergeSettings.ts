@@ -1,6 +1,7 @@
 import {
   SETTINGS_FIELDS,
   type SettingsDoc,
+  type SettingsDocV1,
   type SettingsField,
   type SettingsStamps,
 } from './types';
@@ -11,7 +12,7 @@ import {
  * written whole at `updatedAt`; an absent reduced-motion choice (an app from before it existed)
  * at 0. The defaults (`updatedAt` 0) are therefore older than anything the user ever chose.
  */
-export function settingsStamps(doc: SettingsDoc): Record<SettingsField, number> {
+export function settingsStamps(doc: SettingsDoc | SettingsDocV1): Record<SettingsField, number> {
   const given = doc.fieldsAt;
   const own = given?.doc === doc.updatedAt;
   const out = {} as Record<SettingsField, number>;
@@ -22,7 +23,7 @@ export function settingsStamps(doc: SettingsDoc): Record<SettingsField, number> 
   return out;
 }
 
-const valueOf = (doc: SettingsDoc, f: SettingsField): unknown => doc[f] ?? null;
+const valueOf = (doc: SettingsDoc | SettingsDocV1, f: SettingsField): unknown => doc[f] ?? null;
 
 /** Equal stamps, different values: deterministic, so every copy agrees; consent prefers off. */
 function bWinsTie(field: SettingsField, a: unknown, b: unknown): boolean {
@@ -33,10 +34,24 @@ function bWinsTie(field: SettingsField, a: unknown, b: unknown): boolean {
   return jb > ja;
 }
 
-const withStamps = (doc: SettingsDoc, at: number, stamps: Record<SettingsField, number>) =>
-  ({ ...doc, version: 1, updatedAt: at, fieldsAt: { doc: at, ...stamps } }) as SettingsDoc & {
-    fieldsAt: SettingsStamps;
-  };
+const withStamps = (
+  doc: SettingsDoc | SettingsDocV1,
+  at: number,
+  stamps: Record<SettingsField, number>,
+): SettingsDoc => {
+  const fieldsAt: SettingsStamps = { doc: at, ...stamps };
+  return { ...doc, version: 2, reducedMotion: doc.reducedMotion ?? null, updatedAt: at, fieldsAt };
+};
+
+/**
+ * A settings document in the current version (v2). A v1 document (device copy or server answer
+ * from before v2) gets `reducedMotion` (null: follow the device) and its per-field stamps; its
+ * values and its stamps do not change, so the upgrade is idempotent and merges as before.
+ */
+export function upgradeSettings(doc: SettingsDoc | SettingsDocV1): SettingsDoc {
+  if (doc.version === 2) return doc;
+  return withStamps(doc, doc.updatedAt, settingsStamps(doc));
+}
 
 /**
  * Merges two copies of the settings field by field: the more recently changed value of each
@@ -45,7 +60,10 @@ const withStamps = (doc: SettingsDoc, at: number, stamps: Record<SettingsField, 
  * before the server's copy arrived, changes only what the user touched. Commutative and
  * idempotent. Mirrors the server's `mergeSettings`.
  */
-export function mergeSettings(a: SettingsDoc, b: SettingsDoc): SettingsDoc {
+export function mergeSettings(
+  a: SettingsDoc | SettingsDocV1,
+  b: SettingsDoc | SettingsDocV1,
+): SettingsDoc {
   const sa = settingsStamps(a);
   const sb = settingsStamps(b);
   const out = { ...a } as Record<string, unknown>;
@@ -73,5 +91,5 @@ export function stampSettings(prev: SettingsDoc, next: SettingsDoc, at: number):
     }
   }
   if (!changed) return prev;
-  return withStamps({ ...next, reducedMotion: next.reducedMotion ?? null }, at, stamps);
+  return withStamps(next, at, stamps);
 }

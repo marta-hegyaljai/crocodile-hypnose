@@ -312,6 +312,100 @@ describe('GET/PUT /me/settings', () => {
     assert.equal((await put('settings', settings({ reducedMotion: 'yes' }))).statusCode, 400);
   });
 
+  describe('version 2', () => {
+    const FIELDS = [
+      'crocName',
+      'goals',
+      'experience',
+      'sessionLength',
+      'reminder',
+      'moodConsent',
+      'safety',
+      'sound',
+      'haptics',
+      'reducedMotion',
+    ];
+    const v2 = (overrides: Record<string, unknown> = {}) => {
+      const at = Number(overrides.updatedAt ?? ctx.clock.now);
+      return settings({
+        version: 2,
+        reducedMotion: null,
+        fieldsAt: { doc: at, ...Object.fromEntries(FIELDS.map((f) => [f, at])) },
+        ...overrides,
+      });
+    };
+    const getAs = (version: number) =>
+      ctx.app.inject({
+        method: 'GET',
+        url: `/me/settings${version === 2 ? '?v=2' : ''}`,
+        headers: { authorization: `Bearer ${token}` },
+      });
+    const userId = async () =>
+      (await me(ctx, token)).json<{ user: { id: string } }>().user.id;
+
+    test('a v2 document needs reducedMotion and fieldsAt, and is answered as v2', async () => {
+      const { reducedMotion: _r, ...noMotion } = v2() as Record<string, unknown>;
+      assert.equal((await put('settings', noMotion)).statusCode, 400);
+      const { fieldsAt: _f, ...noStamps } = v2() as Record<string, unknown>;
+      assert.equal((await put('settings', noStamps)).statusCode, 400);
+      const res = await put('settings', v2({ reducedMotion: true }));
+      assert.equal(res.statusCode, 200);
+      assert.equal(res.json<DocBody>().settings?.version, 2);
+      assert.equal(res.json<DocBody>().settings?.reducedMotion, true);
+      assert.equal((await getAs(2)).json<DocBody>().settings?.version, 2);
+    });
+
+    test('the server keeps v2 whichever version was written; an app that does not ask gets v1', async () => {
+      const res = await put('settings', settings());
+      // A v1 write is answered in v1 ...
+      assert.equal(res.json<DocBody>().settings?.version, 1);
+      // ... and stored as v2.
+      const row = await ctx.repo.getDocument(await userId(), 'settings');
+      assert.equal(row?.version, 2);
+      assert.equal(row?.data.version, 2);
+      assert.equal(row?.data.reducedMotion, null);
+      assert.equal((await getAs(1)).json<DocBody>().settings?.version, 1);
+      const upgraded = (await getAs(2)).json<DocBody>().settings as Record<string, unknown>;
+      assert.equal(upgraded.version, 2);
+      assert.equal((upgraded.fieldsAt as Record<string, number>).crocName, ctx.clock.now);
+      assert.equal(
+        (await put('settings', v2({ updatedAt: ctx.clock.now + 5 }))).json<DocBody>().settings
+          ?.version,
+        2,
+      );
+    });
+
+    test('a v1 row written before v2 existed is upgraded when it is read', async () => {
+      const id = await userId();
+      const at = ctx.clock.now - 1000;
+      await ctx.repo.putDocument({
+        userId: id,
+        kind: 'settings',
+        version: 1,
+        data: settings({ updatedAt: at }),
+        updatedAt: at,
+        storedAt: at,
+      });
+      const read = (await getAs(2)).json<DocBody>().settings as Record<string, unknown>;
+      assert.equal(read.version, 2);
+      assert.equal(read.reducedMotion, null);
+      assert.equal((read.fieldsAt as Record<string, number>).doc, at);
+      assert.equal((read.fieldsAt as Record<string, number>).reducedMotion, 0);
+      assert.equal((read.fieldsAt as Record<string, number>).sound, at);
+    });
+
+    test('an older app that never heard of reducedMotion does not erase it', async () => {
+      await put('settings', v2({ reducedMotion: true }));
+      ctx.clock.advance(10);
+      // The old app writes a whole v1 document without the field.
+      const res = await put('settings', settings({ updatedAt: ctx.clock.now, sound: false }));
+      assert.equal(res.statusCode, 200);
+      const stored = (await getAs(2)).json<DocBody>().settings;
+      assert.equal(stored?.reducedMotion, true);
+      assert.equal(stored?.sound, false);
+    });
+  });
+
   test('validates the reminder time and the enums', async () => {
     const cases: [string, Record<string, unknown>][] = [
       ['bad time', { reminder: { enabled: true, time: '25:00', timeOfDay: 'morning' } }],

@@ -2,6 +2,7 @@ import { AppState, Platform } from 'react-native';
 
 import { apiUrl } from '@/config/env';
 import { appAuthStore, sessionManager } from '@/services/auth/instance';
+import { REFETCH_MIN_MS, subscribeForeground, throttle } from '@/services/foreground';
 
 import { appStorage } from './asyncStorage';
 import { createHttpProfileClient } from './profileClient';
@@ -25,3 +26,7 @@ if (Platform.OS === 'web' && typeof window !== 'undefined' && window.addEventLis
 AppState.addEventListener('change', (state) => {
   if (state === 'active') void appProfileStore.getState().flush();
 });
+
+// Coming back to the app (focus, visibility, active) also reads the documents again, so a tab or
+// device that sat in the background catches up with what another device did. Throttled.
+subscribeForeground(throttle(() => void appProfileStore.getState().refetch(), REFETCH_MIN_MS));

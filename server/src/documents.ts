@@ -148,7 +148,10 @@ export const SETTINGS_FIELDS = [
   'reducedMotion',
 ] as const;
 
-/** User settings, v1: what onboarding decided and what the settings screen (step 8) will edit. */
+/**
+ * User settings, v1: what onboarding decided and what the settings screen edits. Kept accepted
+ * for apps that have not moved to v2: `reducedMotion` and `fieldsAt` are optional here.
+ */
 const settingsV1 = {
   type: 'object',
   additionalProperties: false,
@@ -208,6 +211,16 @@ const settingsV1 = {
   },
 } as const;
 
+/**
+ * User settings, v2: v1 with `reducedMotion` and `fieldsAt` formal (required). This is what the
+ * server stores: a v1 document is upgraded when it is written (and when an old row is read).
+ */
+const settingsV2 = {
+  ...settingsV1,
+  required: [...settingsV1.required, 'reducedMotion', 'fieldsAt'],
+  properties: { ...settingsV1.properties, version: { type: 'integer', const: 2 } },
+} as const;
+
 /** Stop ids as the content pack names them. */
 export const STOP_ID_PATTERN = '^[a-z0-9-]{1,64}$';
 /** Far above any content pack; keeps one document bounded. */
@@ -264,14 +277,14 @@ const gamificationV1 = {
 /** JSON schema per kind and version. Add a version here to extend a document. */
 export const DOCUMENT_SCHEMAS: Record<DocumentKind, Record<number, object>> = {
   onboarding: { 1: onboardingV1 },
-  settings: { 1: settingsV1 },
+  settings: { 1: settingsV1, 2: settingsV2 },
   progress: { 1: progressV1 },
   gamification: { 1: gamificationV1 },
 };
 
 export const CURRENT_VERSION: Record<DocumentKind, number> = {
   onboarding: 1,
-  settings: 1,
+  settings: 2,
   progress: 1,
   gamification: 1,
 };
@@ -351,7 +364,17 @@ export function mergeSettings(a: Doc, b: Doc): Doc {
     fieldsAt[f] = Math.max(sa[f], sb[f]);
   }
   const updatedAt = Math.max(Number(a.updatedAt) || 0, Number(b.updatedAt) || 0);
-  return { ...out, version: 1, updatedAt, fieldsAt: { doc: updatedAt, ...fieldsAt } };
+  return { ...out, version: 2, updatedAt, fieldsAt: { doc: updatedAt, ...fieldsAt } };
+}
+
+/**
+ * Settings as a client of `version` understands them. The server keeps v2; a v1 row (written
+ * before v2 existed) is upgraded here, on read, and a v1 client gets the v2 content back under
+ * its own version (it already tolerates the two fields v2 made formal).
+ */
+export function settingsAtVersion(data: Doc, version: number): Doc {
+  const v2 = data.version === 2 ? data : mergeSettings(data, data);
+  return version >= 2 ? v2 : { ...v2, version: 1 };
 }
 
 /** Consent withdrawn in the settings: off, and decided at some point (not just the default). */

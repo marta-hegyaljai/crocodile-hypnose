@@ -25,13 +25,13 @@ import { defaultProgress, isProgressDoc, type ProgressDoc } from '@/services/pro
 
 import { createDocumentStore, type DocumentState } from './documentStore';
 import { mergeOnboarding } from './mergeOnboarding';
-import { mergeSettings, stampSettings } from './mergeSettings';
+import { mergeSettings, settingsStamps, stampSettings, upgradeSettings } from './mergeSettings';
 import type { ProfileClient, StreamKind, StreamTypes } from './profileClient';
 import {
   defaultOnboarding,
   defaultSettings,
+  isAnySettingsDoc,
   isOnboardingDoc,
-  isSettingsDoc,
   type OnboardingDoc,
   type SettingsDoc,
 } from './types';
@@ -84,6 +84,11 @@ export interface ProfileState {
   exportData(): Promise<string>;
   /** Asks the server now: pending reads first, then pending writes (e.g. when back online). */
   flush(): Promise<void>;
+  /**
+   * Reads every document again and merges it, for when the user comes back to the app (another
+   * device may have moved on). Quiet when the server cannot be reached.
+   */
+  refetch(): Promise<void>;
   /** Forgets everything, including the device copies (they hold health data). */
   reset(): Promise<void>;
 }
@@ -134,7 +139,9 @@ export function createProfileStore({
     key: SETTINGS_KEY,
     storage,
     defaults: () => defaultSettings(),
-    validate: isSettingsDoc,
+    // A device copy from before settings v2 is read and upgraded.
+    validate: (value): value is SettingsDoc => isAnySettingsDoc(value),
+    upgrade: upgradeSettings,
     fetch: () => withToken((token) => client.get('settings', token)),
     push: (_user, doc) => withToken((token) => client.put('settings', doc, token)),
     // Field by field, on the device and on the server: a change touches only its own fields.
@@ -234,7 +241,18 @@ export function createProfileStore({
       if (!s.seeded) return;
       const was = lastConsent;
       lastConsent = s.doc.moodConsent;
-      if (was === true && !s.doc.moodConsent) scrubMoods();
+      if (s.doc.moodConsent) return;
+      // From on to off; or the first time the choice is known and it is a withdrawal (not the
+      // default): the app was closed between that write and the scrub, and the device still
+      // holds the log. Checked on load too, once the mood log itself is in.
+      if (was === true || (was === null && withdrawn() && moods.getState().status === 'ready')) {
+        scrubMoods();
+      }
+    };
+    /** The settings say the user withdrew mood consent (off, and decided at some point). */
+    const withdrawn = () => {
+      const s = settings.getState();
+      return s.seeded && !s.doc.moodConsent && settingsStamps(s.doc).moodConsent > 0;
     };
     const onChange = () => {
       enforceMoodConsent();
@@ -267,6 +285,9 @@ export function createProfileStore({
         // The device copies first: with one, routing can proceed and the server check follows.
         await Promise.all(docs.map((d) => d.getState().load(userId, { fresh })));
         if (startedIn !== generation) return;
+        // The consent on the device says off after a withdrawal: whatever the log still holds
+        // goes (the app may have been closed before the scrub finished).
+        if (withdrawn()) scrubMoods();
         const hasLocal = onboarding.getState().source !== 'none';
         if (!fresh && !hasLocal) {
           // A new device (or cleared storage): the server's copy decides where the user is. The
@@ -316,6 +337,15 @@ export function createProfileStore({
         await moods.getState().flush();
       },
 
+      async refetch() {
+        if (get().status !== 'ready') return;
+        // The mood log only exists with consent (the server holds none otherwise).
+        const logs = settings.getState().doc.moodConsent ? [sessions, moods] : [sessions];
+        await Promise.all(
+          [onboarding, settings, progress, ...logs].map((d) => d.getState().refetch()),
+        );
+      },
+
       async reset() {
         generation += 1;
         lastConsent = null;
@@ -328,9 +358,13 @@ export function createProfileStore({
   return store;
 }
 
-/** The server refused the events themselves (not the connection): retrying them cannot help. */
-function isRefused(error: unknown): boolean {
-  return isAuthError(error) && (error.code === 'invalid_request' || error.code === 'unknown');
+/**
+ * The server refused the events themselves: retrying them cannot help. Only an explicit
+ * validation refusal counts. A rate limit, an unmapped 4xx (404, 409, 413, a new error code) or
+ * a server error says nothing about the events, so they stay pending and are sent again.
+ */
+export function isRefused(error: unknown): boolean {
+  return isAuthError(error) && error.code === 'invalid_request';
 }
 
 function waitFor<T>(

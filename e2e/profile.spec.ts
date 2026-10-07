@@ -373,4 +373,33 @@ test.describe('profile and settings', () => {
     await expect(page.getByTestId('privacy-screen')).toBeVisible();
     await check();
   });
+
+  test('a change made on another device shows when the tab is looked at again', async ({
+    page,
+    request,
+  }, info) => {
+    const errors = collectErrors(page);
+    const email = uniqueEmail(info, 'focus');
+    const headers = await onHome(page, request, email);
+    await openProfile(page);
+    await expect(page.getByTestId('profile-croc-name')).toHaveText('Zé');
+
+    // Another device (an older app writing a v1 document) renames the croc.
+    const current = await serverSettings(request, headers);
+    const { storedAt: _s, fieldsAt: _f, ...rest } = current;
+    const res = await request.put(`${API}/me/settings`, {
+      headers,
+      data: { ...rest, crocName: 'Neu', updatedAt: Date.now() + 60_000 },
+    });
+    expect(res.status()).toBe(200);
+    // Nothing yet: the tab does not poll.
+    await expect(page.getByTestId('profile-croc-name')).toHaveText('Zé');
+
+    // Coming back to the tab reads the documents again.
+    await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+    await expect(page.getByTestId('profile-croc-name')).toHaveText('Neu');
+    // The old device's write left the app's own v2 fields alone.
+    expect((await serverSettings(request, headers)).crocName).toBe('Neu');
+    expect(errors).toEqual([]);
+  });
 });

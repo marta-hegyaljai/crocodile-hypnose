@@ -33,11 +33,11 @@ async function setup() {
   await auth.getState().bootstrap();
   await auth.getState().signUp({ email: 'ann@example.com', password: 'secret12' });
   const client = createFakeProfileClient({ userOf: () => 'user-1' });
-  const device = () =>
+  const device = (storage = memoryStorage()) =>
     createProfileStore({
       client,
       session,
-      storage: memoryStorage(),
+      storage,
       debounceMs: 0,
       retryMs: { first: 5, max: 20 },
     });
@@ -128,6 +128,42 @@ describe('mood consent', () => {
     expect(Object.keys(phone.getState().moods.items)).toEqual([]);
     await phone.getState().recordMood(mood('mood-0000003'));
     expect(Object.keys(phone.getState().moods.items)).toEqual(['mood-0000003']);
+  });
+
+  it('a withdrawal that was written but not yet scrubbed when the app closed is scrubbed on load', async () => {
+    const { client, device } = await setup();
+    const storage = memoryStorage();
+    const before = device(storage);
+    await withConsent(before);
+    expect(Object.keys(before.getState().moods.items)).toHaveLength(1);
+    // The consent-off write reached the device, then the app was killed before the scrub.
+    const key = 'mhp.hypnose.settings.v1.user-1';
+    const stored = JSON.parse(storage.data.get(key)!) as {
+      updatedAt: number;
+      fieldsAt: Record<string, number>;
+    } & Record<string, unknown>;
+    const at = stored.updatedAt + 10;
+    storage.data.set(
+      key,
+      JSON.stringify({
+        ...stored,
+        moodConsent: false,
+        updatedAt: at,
+        fieldsAt: { ...stored.fieldsAt, doc: at, moodConsent: at },
+      }),
+    );
+    // Restart, offline: nothing may depend on the server.
+    client.failAll(new AuthError('offline'));
+    const after = device(storage);
+    await after.getState().load('user-1');
+    await settle();
+    expect(after.getState().settings.moodConsent).toBe(false);
+    expect(Object.keys(after.getState().moods.items)).toEqual([]);
+    expect(after.getState().onboarding.firstSession).toMatchObject({
+      moodBefore: null,
+      moodAfter: null,
+    });
+    expect(JSON.parse(storage.data.get('mhp.hypnose.moods.v1.user-1')!).items).toEqual({});
   });
 
   it('settings still at the defaults (not yet known) never delete anything', async () => {

@@ -7,6 +7,21 @@ import type { SyncedDocument } from './types';
 
 export type DocumentStatus = 'idle' | 'loading' | 'ready';
 
+/**
+ * Thrown by a `push` that got part of the way before it failed (e.g. a rate limit in the middle of
+ * a batch of events): `partial` is the document with what the server already confirmed. The store
+ * keeps that, so the retry starts where this one stopped, and treats `reason` as the failure.
+ */
+export class PartialPush<T> extends Error {
+  constructor(
+    readonly reason: unknown,
+    readonly partial: T,
+  ) {
+    super(reason instanceof Error ? reason.message : 'push interrupted');
+    this.name = 'PartialPush';
+  }
+}
+
 export interface DocumentState<T extends SyncedDocument> {
   status: DocumentStatus;
   /** The user the document belongs to; null when nobody is signed in. */
@@ -44,6 +59,11 @@ export interface DocumentState<T extends SyncedDocument> {
   update(change: (doc: T) => T): Promise<void>;
   /** Asks the server now: the pending read if there is one, else a pending write. Never throws. */
   flush(): Promise<void>;
+  /**
+   * Reads the server's copy again and merges it (another device may have changed it). For when
+   * the user comes back to the app. Quiet: a failed read changes nothing and is not retried.
+   */
+  refetch(): Promise<void>;
   /** Forgets the document (and the device copy) when the user signs out. */
   reset(options?: { keepLocal?: boolean }): Promise<void>;
 }
@@ -58,6 +78,11 @@ export interface DocumentStoreOptions<T extends SyncedDocument> {
   fetch: (userId: string) => Promise<T | null>;
   /** Writes to the server; resolves what is stored afterwards (possibly a newer document). */
   push: (userId: string, doc: T) => Promise<T>;
+  /**
+   * Brings a copy written by an older version of the document (the device's own storage) up to
+   * the current one. `validate` accepts those too.
+   */
+  upgrade?: (doc: T) => T;
   /** How two copies combine (default: the later `updatedAt` wins, the local copy on a tie). */
   merge?: (local: T, remote: T) => T;
   /**
@@ -124,11 +149,13 @@ export function createDocumentStore<T extends SyncedDocument>(
   const { key, storage, defaults, validate, fetch, push } = options;
   const merge = options.merge ?? ((local: T, remote: T) => newerOf(local, remote) ?? local);
   const stamp = options.stamp;
+  const upgrade = options.upgrade ?? ((doc: T) => doc);
   const now = options.now ?? Date.now;
   const debounceMs = options.debounceMs ?? 250;
   const retryMs = options.retryMs ?? { first: 1000, max: 30_000 };
   let timer: ReturnType<typeof setTimeout> | null = null;
   let retryTimer: ReturnType<typeof setTimeout> | null = null;
+  let pushRetryTimer: ReturnType<typeof setTimeout> | null = null;
   let retryWait = retryMs.first;
   // Bumped on every load/reset so late answers for another user (or a signed-out one) are dropped.
   let generation = 0;
@@ -142,7 +169,7 @@ export function createDocumentStore<T extends SyncedDocument>(
     if (!raw) return null;
     try {
       const parsed: unknown = JSON.parse(raw);
-      return validate(parsed) ? parsed : null;
+      return validate(parsed) ? upgrade(parsed) : null;
     } catch {
       return null;
     }
@@ -167,8 +194,10 @@ export function createDocumentStore<T extends SyncedDocument>(
   function clearTimers() {
     if (timer) clearTimeout(timer);
     if (retryTimer) clearTimeout(retryTimer);
+    if (pushRetryTimer) clearTimeout(pushRetryTimer);
     timer = null;
     retryTimer = null;
+    pushRetryTimer = null;
     retryWait = retryMs.first;
   }
 
@@ -285,6 +314,29 @@ export function createDocumentStore<T extends SyncedDocument>(
         void readServer(userId, startedIn);
       },
 
+      async refetch() {
+        const { userId, serverKnown } = get();
+        if (!userId) return;
+        // The first read has not succeeded yet: that is the read to retry (it merges the same way).
+        if (!serverKnown) return get().flush();
+        if (reading) return reading;
+        const startedIn = generation;
+        reading = (async () => {
+          let remote: T | null;
+          try {
+            remote = await fetch(userId);
+          } catch {
+            return;
+          }
+          if (startedIn !== generation || !remote) return;
+          await adopt(userId, remote, 'server');
+          if (get().dirty) await get().flush();
+        })().finally(() => {
+          reading = null;
+        });
+        return reading;
+      },
+
       async update(change) {
         const { userId, doc } = get();
         if (!userId) return;
@@ -333,9 +385,29 @@ export function createDocumentStore<T extends SyncedDocument>(
             } else {
               set({ dirty: false, syncError: null });
             }
-          } catch (err) {
+          } catch (thrown) {
             if (startedIn !== generation) return;
+            let err = thrown;
+            if (thrown instanceof PartialPush) {
+              // Keep what the server confirmed before it stopped; the rest is sent next time.
+              err = thrown.reason;
+              const merged = merge(get().doc, thrown.partial as T);
+              if (!sameContent(merged, get().doc)) {
+                set({ doc: merged });
+                await writeLocal(userId, merged);
+                if (startedIn !== generation) return;
+              }
+            }
             set({ syncError: err, rejected: isRejection(err) });
+            if (isAuthError(err) && err.code === 'rate_limited') {
+              // The server asked us to slow down: try again when it says, not on every change.
+              const wait = Math.min(Math.max((err.retryAfterSeconds ?? 5) * 1000, 1000), 120_000);
+              if (pushRetryTimer) clearTimeout(pushRetryTimer);
+              pushRetryTimer = setTimeout(() => {
+                pushRetryTimer = null;
+                if (startedIn === generation) void get().flush();
+              }, wait);
+            }
             if (__DEV__ && !(isAuthError(err) && err.isConnectivity)) {
               console.warn(`[profile] could not write ${key} to the server`, err);
             }
