@@ -21,8 +21,8 @@ export function LilyPad({ size = 72, flower = false, rotation = 0, style, testID
   const { atmosphere } = useTheme();
   const night = atmosphere === 'night';
   const pad = night ? '#3F7A3A' : palette.leaf;
-  const padDark = night ? '#2E5A33' : '#4F8A3E';
-  const vein = night ? '#2E5A33' : '#4F8A3E';
+  const padDark = night ? palette.jungleMid : '#4F8A3E';
+  const vein = night ? palette.jungleMid : '#4F8A3E';
   const petal = night ? '#D97E95' : palette.waterLily;
   const petalLight = night ? '#E9A3B5' : palette.lilyLight;
 
