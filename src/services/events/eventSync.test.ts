@@ -68,7 +68,9 @@ describe('session events sync', () => {
     await tablet.getState().recordSession(event('evt-00000002', { at: 200 }));
     await flush();
     expect(server().map((e) => (e as SessionCompletedEvent).firstTime)).toEqual([true, false]);
-    expect(tablet.getState().sessions.items['evt-00000002']?.firstTime).toBe(false);
+    expect(
+      (tablet.getState().sessions.items['evt-00000002'] as SessionCompletedEvent).firstTime,
+    ).toBe(false);
     // A third device sees both, confirmed.
     const laptop = device();
     await laptop.getState().load('user-1');

@@ -44,6 +44,8 @@ export default defineConfig({
         RESET_LINK_BASE: `http://localhost:${PORT}/reset-password`,
         LOG_LEVEL: 'info',
         JWT_SECRET: 'e2e-only-secret-e2e-only-secret-e2e',
+        // Dev-only shortcuts (e.g. adding calm minutes to see the croc grow).
+        DEV_HOOKS: '1',
       },
     },
     {

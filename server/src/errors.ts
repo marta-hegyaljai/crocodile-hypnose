@@ -17,6 +17,8 @@ export type ErrorCode =
   | 'rate_limited'
   | 'not_found'
   | 'consent_required'
+  | 'insufficient_points'
+  | 'locked'
   | 'internal';
 
 export interface ErrorBody {

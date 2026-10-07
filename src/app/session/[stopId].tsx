@@ -30,6 +30,7 @@ import { VideoLesson } from '@/features/session/VideoLesson';
 import { VisualExercise } from '@/features/session/VisualExercise';
 import { newEventId } from '@/services/events/types';
 import { useFeedback } from '@/services/feedback';
+import { useGrowthStage } from '@/services/gamification';
 import { useProfile, useProfileStore } from '@/services/profile';
 import { appStorage } from '@/services/profile/asyncStorage';
 import type { MoodValue } from '@/services/profile/types';
@@ -70,6 +71,7 @@ export default function SessionScreen() {
     s.settingsKnown ? s.settings.moodConsent : s.onboarding.moodConsent === true,
   );
   const feedback = useFeedback();
+  const crocStage = useGrowthStage();
   const layout = useNightLayout();
   const dive = useDive(layout.depth);
   const [phase, setPhase] = useState<Phase>('intro');
@@ -257,7 +259,7 @@ export default function SessionScreen() {
   if (phase === 'reward' || (finishedRise && !consent)) {
     day = completion ? (
       <LagoonSheetScreen
-        stage="hatchling"
+        stage={crocStage}
         expression="excited"
         crocName={crocName}
         celebrating={phase === 'reward'}
@@ -272,7 +274,7 @@ export default function SessionScreen() {
   } else if (phase === 'moodAfter' || finishedRise) {
     day = (
       <LagoonSheetScreen
-        stage="hatchling"
+        stage={crocStage}
         expression="happy"
         crocName={crocName}
         header={null}
@@ -297,7 +299,7 @@ export default function SessionScreen() {
     // The mood sheet stays while the river takes over (no swap back to the intro mid-fade).
     day = (
       <LagoonSheetScreen
-        stage="hatchling"
+        stage={crocStage}
         expression="calm"
         crocName={crocName}
         showCroc={!sinking}
@@ -325,7 +327,7 @@ export default function SessionScreen() {
   } else {
     day = (
       <LagoonSheetScreen
-        stage="hatchling"
+        stage={crocStage}
         expression={busy ? 'eyesClosed' : stop.type === 'longTrance' ? 'sleepy' : 'happy'}
         crocName={crocName}
         showCroc={!sinking}

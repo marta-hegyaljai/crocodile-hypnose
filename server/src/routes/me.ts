@@ -31,6 +31,8 @@ function bearer(req: FastifyRequest): string {
 export interface MeRouteOptions {
   service: AuthService;
   now?: () => number;
+  /** Per client address on the event streams' POST routes. */
+  eventsRateLimit?: { max: number; timeWindow: number };
 }
 
 /** What the app sees of a stored document: the body it wrote, plus when the server stored it. */
@@ -38,7 +40,10 @@ function wire(record: DocumentRecord | null) {
   return record ? { ...record.data, storedAt: record.storedAt } : null;
 }
 
-export async function meRoutes(app: FastifyInstance, { service, now = Date.now }: MeRouteOptions) {
+export async function meRoutes(
+  app: FastifyInstance,
+  { service, now = Date.now, eventsRateLimit }: MeRouteOptions,
+) {
   const repo = service.repo;
 
   app.get('/me', async (req) => {
@@ -110,7 +115,10 @@ export async function meRoutes(app: FastifyInstance, { service, now = Date.now }
 
     app.post<{ Body: Record<string, Record<string, unknown>[]> }>(
       `/me/${stream}`,
-      { schema: { body: bodySchemaForStream(stream) } },
+      {
+        schema: { body: bodySchemaForStream(stream) },
+        ...(eventsRateLimit ? { config: { rateLimit: eventsRateLimit } } : {}),
+      },
       async (req) => {
         const { user } = await service.authenticate(bearer(req));
         if (stream === 'mood' && !(await moodConsent(user.id))) {

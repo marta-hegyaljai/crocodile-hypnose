@@ -3,22 +3,32 @@ import { StyleSheet, View } from 'react-native';
 
 import { t } from '@/copy';
 import { Croc } from '@/illustration';
-import { useProfile } from '@/services/profile';
+import { useGrowthStage, usePoints, useWeeklyGoal } from '@/services/gamification';
 import { palette, space } from '@/theme';
 import { Chip, Text } from '@/ui';
 
-import { WEEKLY_GOAL_DAYS, daysActiveThisWeek, placeholderPoints } from './stats';
-
-/** The croc's avatar and name, the points chip and the weekly-goal chip. */
+/**
+ * The croc's avatar (at its growth stage) and name, the points chip (the server's balance, plus
+ * what offline events will add) and the weekly-goal chip.
+ */
 export function HomeHeader({ crocName }: { crocName: string }) {
-  const points = useProfile((s) => placeholderPoints(s.onboarding, s.sessions));
-  const days = useProfile((s) => daysActiveThisWeek(s.progress, Date.now()));
+  const { balance, pending } = usePoints();
+  const { days, target } = useWeeklyGoal();
+  const stage = useGrowthStage();
+  const pointsLabel =
+    pending > 0
+      ? t('gamification.pointsWithPending', { n: balance, pending })
+      : t('points.amount', { n: balance });
+  const pointsA11y =
+    pending > 0
+      ? t('gamification.a11yPointsPending', { n: balance, pending })
+      : t('a11y.points', { n: balance });
   return (
     <View style={styles.row}>
       <View style={styles.avatarRow}>
         <View style={styles.avatar}>
           <Croc
-            stage="hatchling"
+            stage={stage}
             pose="peek"
             water="inline"
             width={52}
@@ -34,15 +44,15 @@ export function HomeHeader({ crocName }: { crocName: string }) {
       </View>
       <View style={styles.chips}>
         <Chip
-          label={t('points.amount', { n: points })}
+          label={pointsLabel}
           tone="points"
-          accessibilityLabel={t('a11y.points', { n: points })}
+          accessibilityLabel={pointsA11y}
           testID="home-points"
         />
         <Chip
-          label={t('goal.progress', { done: days, total: WEEKLY_GOAL_DAYS })}
-          tone="goal"
-          accessibilityLabel={t('a11y.weeklyGoal', { done: days, total: WEEKLY_GOAL_DAYS })}
+          label={t('goal.progress', { done: Math.min(days, target), total: target })}
+          tone={days >= target ? 'celebrate' : 'goal'}
+          accessibilityLabel={t('a11y.weeklyGoal', { done: days, total: target })}
           testID="home-weekly"
         />
       </View>

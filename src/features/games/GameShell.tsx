@@ -92,6 +92,8 @@ function ShellBody({
   const finish = useCallback(
     (r: GameResult) => {
       if (phaseRef.current !== 'playing' && phaseRef.current !== 'paused') return;
+      // Set now, not after the render: a second finish in the same tick is ignored.
+      phaseRef.current = 'ended';
       setResult(r);
       setPhase('ended');
       feedback.haptic('success');

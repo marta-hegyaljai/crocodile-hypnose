@@ -37,6 +37,13 @@ export interface ServerConfig {
    */
   scrypt: ScryptParams;
   logLevel: string;
+  /** Per client address, on the event streams (`POST /me/events`, `/me/mood`). */
+  eventsRateLimit: { max: number; windowMs: number };
+  /**
+   * Dev and e2e only (DEV_HOOKS=1, never with NODE_ENV=production): routes under `/me/dev/` that
+   * shortcut slow things, such as adding calm minutes to see the croc grow.
+   */
+  devHooks: boolean;
 }
 
 function parseTrustProxy(raw: string | undefined): boolean | number | string {
@@ -103,5 +110,10 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
     trustProxy: parseTrustProxy(env.TRUST_PROXY),
     scrypt: { ...DEFAULT_SCRYPT, logN: int(env, 'SCRYPT_LOG_N', DEFAULT_SCRYPT.logN, 10) },
     logLevel: env.LOG_LEVEL ?? 'info',
+    eventsRateLimit: {
+      max: int(env, 'EVENTS_RATE_LIMIT_MAX', 300),
+      windowMs: int(env, 'EVENTS_RATE_LIMIT_WINDOW_MS', 60_000),
+    },
+    devHooks: !production && env.DEV_HOOKS === '1',
   };
 }

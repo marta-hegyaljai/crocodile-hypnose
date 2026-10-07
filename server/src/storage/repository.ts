@@ -79,6 +79,16 @@ export interface EventRecord {
   storedAt: number;
 }
 
+/** One row of the points ledger (see `src/services/gamification/shared/rules.ts`). */
+export interface LedgerRecord {
+  key: string;
+  kind: string;
+  points: number;
+  seconds: number;
+  ref: string;
+  at: number;
+}
+
 export class EmailTakenError extends Error {
   constructor() {
     super('email taken');
@@ -159,6 +169,19 @@ export interface AccountRepository {
   ): Promise<EventRecord[]>;
   /** The stream's latest `limit` events, oldest first. */
   listEvents(userId: string, stream: string, limit: number): Promise<EventRecord[]>;
+
+  /** The user's whole points ledger. */
+  listLedger(userId: string): Promise<LedgerRecord[]>;
+  /**
+   * Adds ledger rows, atomically: `decide` sees the user's `events` stream and ledger as stored and
+   * returns the rows to add (or throws to add nothing). A key already stored is never replaced.
+   * Returns the ledger afterwards.
+   */
+  updateLedger(
+    userId: string,
+    decide: (state: { events: EventRecord[]; ledger: LedgerRecord[] }) => LedgerRecord[],
+    at: number,
+  ): Promise<LedgerRecord[]>;
 
   close(): Promise<void>;
 }

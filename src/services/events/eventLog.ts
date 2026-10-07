@@ -78,18 +78,47 @@ export function isEventLogDoc<T>(
 export const EVENTS_PER_REQUEST = 50;
 
 /**
+ * Settles events the server refused for good: they are marked done so they are never sent again
+ * (and stay on the device, so nothing is silently lost and other copies merge as before).
+ */
+export function settleRefused<T>(doc: EventLogDoc<T>, ids: ReadonlySet<string>): EventLogDoc<T> {
+  if (ids.size === 0) return doc;
+  const items = { ...doc.items };
+  for (const id of ids) if (items[id]) items[id] = { ...items[id], confirmed: true };
+  return { ...doc, items };
+}
+
+/**
  * Sends a log's unconfirmed events in batches and answers the log as the server stored it (the
  * shape `createDocumentStore`'s push expects).
+ *
+ * When the server refuses a batch (`isRefused`: the events themselves, not the connection), the
+ * batch is sent again one event at a time and only the events refused on their own are dropped,
+ * so one bad event never stops the rest of the stream from syncing.
  */
 export async function pushLog<T extends { id: string }>(
   doc: EventLogDoc<T>,
   send: (items: T[]) => Promise<T[]>,
+  isRefused: (error: unknown) => boolean = () => false,
 ): Promise<EventLogDoc<T>> {
   const pending = pendingOf(doc);
   let result = doc;
+  const refused = new Set<string>();
   for (let i = 0; i < pending.length; i += EVENTS_PER_REQUEST) {
-    const stored = await send(pending.slice(i, i + EVENTS_PER_REQUEST));
-    result = mergeLogs(result, confirmedLog(stored));
+    const batch = pending.slice(i, i + EVENTS_PER_REQUEST);
+    try {
+      result = mergeLogs(result, confirmedLog(await send(batch)));
+    } catch (err) {
+      if (!isRefused(err)) throw err;
+      for (const item of batch) {
+        try {
+          result = mergeLogs(result, confirmedLog(await send([item])));
+        } catch (one) {
+          if (!isRefused(one)) throw one;
+          refused.add(item.id);
+        }
+      }
+    }
   }
-  return result;
+  return settleRefused(result, refused);
 }

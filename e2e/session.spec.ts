@@ -171,7 +171,7 @@ test.describe('sessions', () => {
     await expect(page.getByTestId('stop-intro-3-unlocking')).toBeAttached();
     await expect.poll(() => label(page, 'intro-2')).toContain('Done');
     await expect.poll(() => label(page, 'intro-3')).toContain('You are here');
-    await expect(page.getByTestId('home-points')).toContainText('80');
+    await expect(page.getByTestId('home-points')).toContainText('95');
 
     // The server has one completion (first time) and both mood check-ins.
     await expect
@@ -198,7 +198,7 @@ test.describe('sessions', () => {
     await expect(page.getByTestId('session-reward-points')).toHaveText('+10 Points');
     await expect(page.getByTestId('session-reward-first')).toHaveCount(0);
     await page.getByTestId('session-reward-continue').click();
-    await expect(page.getByTestId('home-points')).toContainText('90');
+    await expect(page.getByTestId('home-points')).toContainText('105');
     expect(errors).toEqual([]);
   });
 

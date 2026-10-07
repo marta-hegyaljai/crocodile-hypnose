@@ -66,6 +66,32 @@ describe('event log', () => {
     ).toBe(pushed);
   });
 
+  it('one refused event does not stop the rest of a batch (it is settled, never resent)', async () => {
+    let doc = emptyLog<SessionCompletedEvent>();
+    for (let i = 1; i <= 3; i++) doc = addToLog(doc, event(`evt-0000000${i}`));
+    const refused = new Error('refused');
+    const stored: string[] = [];
+    const send = async (items: SessionCompletedEvent[]) => {
+      if (items.some((e) => e.id === 'evt-00000002')) throw refused;
+      stored.push(...items.map((e) => e.id));
+      return items;
+    };
+    const pushed = await pushLog(doc, send, (err) => err === refused);
+    expect(stored).toEqual(['evt-00000001', 'evt-00000003']);
+    expect(pendingOf(pushed)).toEqual([]);
+    expect(Object.keys(pushed.items)).toHaveLength(3);
+    // A connection problem is not a refusal: it still fails the push (to be retried).
+    await expect(
+      pushLog(
+        doc,
+        async () => {
+          throw new Error('offline');
+        },
+        (err) => err === refused,
+      ),
+    ).rejects.toThrow('offline');
+  });
+
   it('validates stored logs and events', () => {
     const valid = isEventLogDoc(isSessionCompletedEvent);
     expect(valid(confirmedLog([event('evt-00000001')]))).toBe(true);

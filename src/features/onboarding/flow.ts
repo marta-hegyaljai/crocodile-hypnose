@@ -15,8 +15,8 @@ import {
 export const GOALS_MAX = 2;
 /** The croc's name: 1 to 20 characters once trimmed, counted in code points (emoji count once). */
 export const CROC_NAME_MAX = 20;
-/** Placeholder amount granted when onboarding is done (the points ledger arrives in step 7). */
-export const ONBOARDING_POINTS = 50;
+/** Granted once when onboarding is done (the server ledger pays it; see the shared rules). */
+export { ONBOARDING_POINTS } from '@/services/gamification/shared/rules';
 /** Default reminder times for the two kinds of people. */
 export const REMINDER_TIMES: Record<TimeOfDay, string> = { morning: '08:00', evening: '20:30' };
 

@@ -1,6 +1,7 @@
 import { STOP_TYPES, type StopType } from '@/content/types';
 import type { MoodValue, SyncedDocument } from '@/services/profile/types';
 import { STOP_ID_RE } from '@/services/progress/types';
+import { isGameKind, type GameKind } from '@/services/gamification/shared/rules';
 
 /**
  * Append-only event streams the app keeps on the device and sends to the server
@@ -22,6 +23,18 @@ export interface SessionCompletedEvent {
    */
   firstTime: boolean;
 }
+
+/** A mini-game played through (from the clearing or a map stop). */
+export interface GameCompletedEvent {
+  id: string;
+  type: 'gameCompleted';
+  gameId: GameKind;
+  /** Epoch ms. */
+  at: number;
+}
+
+/** What the `events` stream carries: the input of the points ledger. */
+export type ActivityEvent = SessionCompletedEvent | GameCompletedEvent;
 
 /** A mood check-in before or after a session. Health data: only recorded with consent. */
 export interface MoodEntry {
@@ -63,6 +76,23 @@ export function isSessionCompletedEvent(value: unknown): value is SessionComplet
     typeof v.firstTime === 'boolean' &&
     keysWithin(v, ['id', 'type', 'stopId', 'stopType', 'at', 'firstTime'])
   );
+}
+
+export function isGameCompletedEvent(value: unknown): value is GameCompletedEvent {
+  if (!value || typeof value !== 'object') return false;
+  const v = value as Record<string, unknown>;
+  return (
+    typeof v.id === 'string' &&
+    EVENT_ID_RE.test(v.id) &&
+    v.type === 'gameCompleted' &&
+    isGameKind(v.gameId) &&
+    isTime(v.at) &&
+    keysWithin(v, ['id', 'type', 'gameId', 'at'])
+  );
+}
+
+export function isActivityEvent(value: unknown): value is ActivityEvent {
+  return isSessionCompletedEvent(value) || isGameCompletedEvent(value);
 }
 
 export function isMoodEntry(value: unknown): value is MoodEntry {

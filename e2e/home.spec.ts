@@ -121,7 +121,7 @@ test.describe('home and river map', () => {
     await expect(page.getByTestId('today-title')).toHaveText('Sleep · Stop 1');
     await expect(page.getByTestId('home-greeting')).toHaveText('Hi, E2E River');
     await expect(page.getByTestId('home-points')).toContainText('50');
-    await expect(page.getByTestId('home-weekly')).toContainText('0/5');
+    await expect(page.getByTestId('home-weekly')).toContainText('0/4');
     await expect(page.getByTestId('stop-sleep-1')).toBeInViewport();
     expect(await label(page, 'sleep-1')).toContain('You are here');
 
@@ -142,7 +142,7 @@ test.describe('home and river map', () => {
     await expect(page.getByTestId('today-title')).toHaveText('Sleep · Stop 2');
     await expect.poll(() => label(page, 'sleep-1')).toContain('Done');
     await expect.poll(() => label(page, 'sleep-2')).toContain('You are here');
-    await expect(page.getByTestId('home-weekly')).toContainText('1/5');
+    await expect(page.getByTestId('home-weekly')).toContainText('1/4');
     await expect
       .poll(async () => {
         const croc = await page.getByTestId('map-croc').boundingBox();

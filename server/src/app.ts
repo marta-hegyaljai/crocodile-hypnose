@@ -10,6 +10,7 @@ import { createAuthService } from './auth-service.ts';
 import type { ServerConfig } from './config.ts';
 import { ApiError, type ErrorBody, type ErrorCode } from './errors.ts';
 import { authRoutes } from './routes/auth.ts';
+import { gamificationRoutes } from './routes/gamification.ts';
 import { meRoutes } from './routes/me.ts';
 import { createAccessTokenSigner } from './tokens.ts';
 import type { AccountRepository } from './storage/repository.ts';
@@ -128,7 +129,15 @@ export async function buildApp({
       timeWindow: config.refreshRateLimit.windowMs,
     },
   });
-  await app.register(meRoutes, { service, now });
+  await app.register(meRoutes, {
+    service,
+    now,
+    eventsRateLimit: {
+      max: config.eventsRateLimit.max,
+      timeWindow: config.eventsRateLimit.windowMs,
+    },
+  });
+  await app.register(gamificationRoutes, { service, now, devHooks: config.devHooks });
 
   return app;
 }
