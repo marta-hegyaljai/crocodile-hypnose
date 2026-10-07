@@ -53,3 +53,4 @@
 | 7 | Review r1 | Points refresh in flight for the previous user blocks the new user's first fetch after a sign-in switch. Purchase refusal matched by message text instead of error code. |
 | 7 | QA r1 | Double-tap Continue on reward/growth moment lands on the Games tab. Weekly toast reappears after reload. Growth-moment sound autoplay console error on reload. Crafted game events add calm minutes (bounded by the daily cap). |
 | 7 | Fix r1 | Client pendingGains ignores the 14-day back-date window: a device offline > 14 days shows points the server won’t pay. |
+| 7 | Review r2 | A crafted client can reach days7/days30 and a couple of past weekly goals ~14 days early; >30 activities arriving on one UTC day lose the excess permanently. |
