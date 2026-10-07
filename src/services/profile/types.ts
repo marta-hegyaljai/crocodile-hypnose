@@ -70,6 +70,8 @@ export interface SettingsDoc extends SyncedDocument {
   safety: { answers: SafetyAnswers; cautionMode: boolean };
   sound: boolean;
   haptics: boolean;
+  /** Reduced-motion override: true reduces, false forces full motion, null/absent follows the device. */
+  reducedMotion?: boolean | null;
 }
 
 export function defaultOnboarding(updatedAt = 0): OnboardingDoc {
@@ -182,7 +184,8 @@ export function isSettingsDoc(value: unknown): value is SettingsDoc {
     isAnswers(safety.answers) &&
     isBool(safety.cautionMode) &&
     isBool(value.sound) &&
-    isBool(value.haptics)
+    isBool(value.haptics) &&
+    (value.reducedMotion === undefined || isNullableBool(value.reducedMotion))
   );
 }
 

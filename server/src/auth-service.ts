@@ -286,6 +286,12 @@ export function createAuthService(options: AuthServiceOptions) {
 
     profile: publicUser,
 
+    /** Recent-auth for destructive actions: the account's password, checked like a sign-in. */
+    async confirmPassword(user: UserRecord, password: string): Promise<void> {
+      const ok = await verifyPassword(password, user.passwordHash);
+      if (!ok) throw errors.invalidCredentials();
+    },
+
     /** The storage behind the service, for the app-data routes (same user pool, same deletion). */
     repo,
 

@@ -1,9 +1,10 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import React from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import HomeScreen from '@/app/(app)/home';
 import ProfileTab from '@/app/(app)/profile';
+import PrivacyScreen from '@/app/settings/privacy';
 import ForgotPasswordScreen from '@/app/(auth)/forgot-password';
 import ResetPasswordScreen from '@/app/(auth)/reset-password';
 import SignInScreen from '@/app/(auth)/sign-in';
@@ -364,13 +365,18 @@ describe('home', () => {
     expect(screen.getByTestId('home-greeting')).toHaveTextContent('Hi, ann');
   });
 
-  it('deletes the account only after the in-page confirmation', async () => {
-    await show(ProfileTab);
+  it('deletes the account only after the in-page confirmation and the password', async () => {
+    await show(PrivacyScreen);
     await press('profile-delete-account');
     expect(client.calls.deleteAccount).toBe(0);
     await press('delete-cancel');
     expect(screen.queryByTestId('delete-confirm')).toBeNull();
     await press('profile-delete-account');
+    // No password: nothing is sent.
+    await press('delete-confirm-button');
+    expect(screen.getByTestId('delete-password-error')).toHaveTextContent('Enter your password.');
+    expect(client.calls.deleteAccount).toBe(0);
+    await type('delete-password', 'secret12');
     await press('delete-confirm-button');
     await waitFor(() =>
       expect(store.getState()).toMatchObject({ status: 'signedOut', notice: 'accountDeleted' }),
@@ -378,14 +384,43 @@ describe('home', () => {
     expect(client.accounts.size).toBe(0);
   });
 
-  it('a failed deletion explains why and keeps you signed in', async () => {
-    await show(ProfileTab);
+  it('a wrong password deletes nothing and says so', async () => {
+    await show(PrivacyScreen);
     await press('profile-delete-account');
+    await type('delete-password', 'not-it-at-all');
+    await press('delete-confirm-button');
+    await waitFor(() =>
+      expect(screen.getByTestId('delete-error-message')).toHaveTextContent(
+        /^That password is not correct\./,
+      ),
+    );
+    expect(store.getState().status).toBe('signedIn');
+    expect(client.accounts.size).toBe(1);
+  });
+
+  it('a failed deletion explains why and keeps you signed in', async () => {
+    await show(PrivacyScreen);
+    await press('profile-delete-account');
+    await type('delete-password', 'secret12');
     client.failNext(new AuthError('offline'));
     await press('delete-confirm-button');
     await waitFor(() =>
       expect(screen.getByTestId('delete-error-message')).toHaveTextContent(/^You are offline\./),
     );
     expect(store.getState().status).toBe('signedIn');
+  });
+
+  it('closes the confirmation (and forgets the password) when the user changes', async () => {
+    await show(PrivacyScreen);
+    await press('profile-delete-account');
+    await type('delete-password', 'secret12');
+    expect(screen.getByTestId('delete-confirm')).toBeOnTheScreen();
+    // Another tab signed in as someone else.
+    await act(async () => {
+      store.setState({ user: { ...store.getState().user!, id: 'someone-else' } });
+    });
+    expect(screen.queryByTestId('delete-confirm')).toBeNull();
+    await press('profile-delete-account');
+    expect(screen.getByTestId('delete-password').props.value).toBe('');
   });
 });

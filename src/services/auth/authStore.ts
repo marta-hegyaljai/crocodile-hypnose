@@ -35,7 +35,8 @@ export interface AuthState {
   requestPasswordReset(email: string): Promise<void>;
   /** Sets a new password from a reset link. Signs out here too (the server ended every session). */
   confirmPasswordReset(token: string, password: string): Promise<void>;
-  deleteAccount(): Promise<void>;
+  /** Needs the password again; a wrong one throws `invalid_credentials` and nothing happens. */
+  deleteAccount(password: string): Promise<void>;
   /** Never throws: signing out always works locally, the server is told when reachable. */
   signOut(): Promise<void>;
   /** Fetches the profile. Offline or server trouble is ignored (the cached profile stays). */
@@ -93,9 +94,9 @@ export function createAuthStore({
       set({ status: 'signedOut', user: null, notice: 'passwordChanged', justSignedUp: false });
     },
 
-    async deleteAccount() {
+    async deleteAccount(password) {
       try {
-        await session.withAccessToken((token) => client.deleteAccount(token));
+        await session.withAccessToken((token) => client.deleteAccount(token, password));
       } catch (err) {
         // Never drop the user's action silently: say it did not happen.
         if (isAuthError(err) && err.code === 'session_ended' && get().status === 'signedOut') {

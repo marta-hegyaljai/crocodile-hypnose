@@ -160,4 +160,82 @@ describe('mood check-ins', () => {
       assert.equal((await post('/me/mood', { entries: [bad] })).statusCode, 400);
     }
   });
+
+  const onboardingWithMoods = () => ({
+    version: 1,
+    updatedAt: ctx.clock.now,
+    step: 'done',
+    completed: true,
+    completedAt: ctx.clock.now,
+    goals: ['sleep'],
+    experience: 'new',
+    timeOfDay: 'evening',
+    sessionLength: 'short',
+    safety: { answers: [false, false, false], acknowledged: false },
+    moodConsent: true,
+    crocHatched: true,
+    crocName: 'Snap',
+    firstSession: { completed: true, moodBefore: 2, moodAfter: 4 },
+    reminder: 'skipped',
+    rewardGranted: true,
+  });
+  const putOnboarding = (payload: object) =>
+    ctx.app.inject({ method: 'PUT', url: '/me/onboarding', headers: auth(), payload });
+  const del = (url: string) => ctx.app.inject({ method: 'DELETE', url, headers: auth() });
+
+  test('DELETE /me/mood removes the stream and the onboarding moods, and nothing else', async () => {
+    await putSettings(true);
+    await putOnboarding(onboardingWithMoods());
+    await post('/me/events', { events: [completion()] });
+    await post('/me/mood', { entries: [entry(), entry({ id: 'mood-0000002', phase: 'after' })] });
+
+    assert.equal((await del('/me/mood')).statusCode, 204);
+    assert.equal((await get('/me/mood')).json<Entries>().entries.length, 0);
+    const stored = (await get('/me/onboarding')).json<{ onboarding: Record<string, unknown> }>();
+    assert.deepEqual(stored.onboarding.firstSession, {
+      completed: true,
+      moodBefore: null,
+      moodAfter: null,
+    });
+    assert.equal(stored.onboarding.crocName, 'Snap');
+    assert.equal((await get('/me/events')).json<Events>().events.length, 1);
+    // Idempotent.
+    assert.equal((await del('/me/mood')).statusCode, 204);
+    assert.equal((await ctx.app.inject({ method: 'DELETE', url: '/me/mood' })).statusCode, 401);
+  });
+
+  test('storing settings with consent withdrawn purges mood data (a delete that never arrived)', async () => {
+    await putSettings(true);
+    await putOnboarding(onboardingWithMoods());
+    await post('/me/mood', { entries: [entry()] });
+    ctx.clock.advance(10);
+    await putSettings(false);
+    assert.equal((await get('/me/mood')).json<Entries>().entries.length, 0);
+    const stored = (await get('/me/onboarding')).json<{
+      onboarding: { firstSession: Record<string, unknown> };
+    }>();
+    assert.equal(stored.onboarding.firstSession.moodBefore, null);
+  });
+
+  test('GET /me/export returns the account, documents and both streams', async () => {
+    await putSettings(true);
+    await post('/me/events', { events: [completion()] });
+    await post('/me/mood', { entries: [entry()] });
+    const res = await get('/me/export');
+    assert.equal(res.statusCode, 200);
+    const body = res.json<{
+      exportedAt: string;
+      account: { email: string };
+      documents: Record<string, unknown>;
+      sessionEvents: unknown[];
+      moodEntries: unknown[];
+    }>();
+    assert.equal(body.account.email, 'river@example.com');
+    assert.equal(body.documents.onboarding, null);
+    assert.ok(body.documents.settings);
+    assert.equal(body.sessionEvents.length, 1);
+    assert.equal(body.moodEntries.length, 1);
+    assert.ok(!JSON.stringify(body).includes('passwordHash'));
+    assert.equal((await ctx.app.inject({ method: 'GET', url: '/me/export' })).statusCode, 401);
+  });
 });

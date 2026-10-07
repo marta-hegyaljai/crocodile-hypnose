@@ -17,7 +17,7 @@ import type { ProgressDoc } from '@/services/progress/types';
 export interface FakeProfileClient extends ProfileClient {
   /** Stored documents by `${user}:${kind}`. */
   documents: Map<string, DocumentTypes[DocumentKind]>;
-  calls: { get: number; put: number; append: number };
+  calls: { get: number; put: number; append: number; deleteMood: number };
   /** Stored events by `${user}:${stream}`, in arrival order. */
   streams: Map<string, StreamTypes[StreamKind][]>;
   /** Make every call fail until cleared. */
@@ -33,7 +33,7 @@ export function createFakeProfileClient(
 ): FakeProfileClient {
   const userOf = options.userOf ?? (() => 'user-1');
   const documents = new Map<string, DocumentTypes[DocumentKind]>();
-  const calls = { get: 0, put: 0, append: 0 };
+  const calls = { get: 0, put: 0, append: 0, deleteMood: 0 };
   const streams = new Map<string, StreamTypes[StreamKind][]>();
   let allError: AuthError | null = null;
   let gate: Promise<void> | null = null;
@@ -48,6 +48,24 @@ export function createFakeProfileClient(
     documents,
     calls,
     streams,
+    async deleteMood(accessToken) {
+      calls.deleteMood += 1;
+      await pass();
+      streams.delete(`${userOf(accessToken)}:mood`);
+    },
+    async exportData(accessToken) {
+      await pass();
+      const user = userOf(accessToken);
+      return {
+        documents: Object.fromEntries(
+          [...documents]
+            .filter(([k]) => k.startsWith(`${user}:`))
+            .map(([k, v]) => [k.slice(user.length + 1), v]),
+        ),
+        sessionEvents: streams.get(`${user}:events`) ?? [],
+        moodEntries: streams.get(`${user}:mood`) ?? [],
+      };
+    },
     async listEvents(stream, accessToken) {
       await pass();
       return [...(streams.get(`${userOf(accessToken)}:${stream}`) ?? [])] as never;

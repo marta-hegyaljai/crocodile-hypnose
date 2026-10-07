@@ -7,6 +7,7 @@ import {
   DOCUMENT_KINDS,
   PROGRESS_BODY_LIMIT,
   resolveDocument,
+  withoutMoods,
   type DocumentKind,
 } from '../documents.ts';
 import { ApiError, errors } from '../errors.ts';
@@ -15,6 +16,7 @@ import {
   decideEvent,
   EVENT_STREAMS,
   EVENTS_READ_LIMIT,
+  MAX_EVENTS_PER_STREAM,
   STREAM_FIELD,
   toRecords,
   wireEvent,
@@ -31,6 +33,7 @@ function bearer(req: FastifyRequest): string {
 export interface MeRouteOptions {
   service: AuthService;
   now?: () => number;
+  rateLimit: { max: number; timeWindow: number };
 }
 
 /** What the app sees of a stored document: the body it wrote, plus when the server stored it. */
@@ -38,7 +41,10 @@ function wire(record: DocumentRecord | null) {
   return record ? { ...record.data, storedAt: record.storedAt } : null;
 }
 
-export async function meRoutes(app: FastifyInstance, { service, now = Date.now }: MeRouteOptions) {
+export async function meRoutes(
+  app: FastifyInstance,
+  { service, now = Date.now, rateLimit }: MeRouteOptions,
+) {
   const repo = service.repo;
 
   app.get('/me', async (req) => {
@@ -47,12 +53,28 @@ export async function meRoutes(app: FastifyInstance, { service, now = Date.now }
   });
 
   // Deletes the MHP account and all of its Hypnose data. Every session in every app ends.
-  app.delete('/me', async (req, reply) => {
-    const { user } = await service.authenticate(bearer(req));
-    await service.deleteAccount(user.id);
-    req.log.info({ userId: user.id }, 'account deleted');
-    return reply.code(204).send();
-  });
+  // Needs the password again (recent authentication), so a stolen or left-open session cannot
+  // delete the account.
+  app.delete<{ Body: { password: string } }>(
+    '/me',
+    {
+      config: { rateLimit },
+      schema: {
+        body: {
+          type: 'object',
+          required: ['password'],
+          properties: { password: { type: 'string', maxLength: 1024 } },
+        },
+      },
+    },
+    async (req, reply) => {
+      const { user } = await service.authenticate(bearer(req));
+      await service.confirmPassword(user, req.body.password);
+      await service.deleteAccount(user.id);
+      req.log.info({ userId: user.id }, 'account deleted');
+      return reply.code(204).send();
+    },
+  );
 
   // Per-user app documents: GET returns the stored document (or null), PUT stores the whole
   // document, last write wins on `updatedAt`, and answers with what is stored afterwards.
@@ -85,10 +107,54 @@ export async function meRoutes(app: FastifyInstance, { service, now = Date.now }
           const resolved = resolveDocument(kind as DocumentKind, current?.data ?? null, data);
           return resolved ? { ...incoming, data: resolved } : null;
         });
+        // Withdrawn consent: whatever mood data is still stored goes with it, even when the
+        // app's own delete call never arrived (offline, closed).
+        if (kind === 'settings' && stored.data.moodConsent === false) {
+          await purgeMood(user.id);
+        }
         return { [kind]: wire(stored) };
       },
     );
   }
+
+  /**
+   * Deletes the user's mood data: the check-in stream and the moods held in the onboarding
+   * document (health data). Idempotent.
+   */
+  async function purgeMood(userId: string): Promise<void> {
+    await repo.deleteEvents(userId, 'mood');
+    const onboarding = await repo.getDocument(userId, 'onboarding');
+    if (onboarding && withoutMoods(onboarding.data)) {
+      await repo.putDocument(onboarding, (current) => {
+        const data = current ? withoutMoods(current.data) : null;
+        return current && data ? { ...current, data } : null;
+      });
+    }
+  }
+
+  app.delete('/me/mood', async (req, reply) => {
+    const { user } = await service.authenticate(bearer(req));
+    await purgeMood(user.id);
+    return reply.code(204).send();
+  });
+
+  // Everything the server holds about the user, as one JSON document (data export).
+  app.get('/me/export', async (req) => {
+    const { user } = await service.authenticate(bearer(req));
+    const documents: Record<string, unknown> = {};
+    for (const kind of DOCUMENT_KINDS) {
+      documents[kind] = wire(await repo.getDocument(user.id, kind));
+    }
+    const stream = async (name: (typeof EVENT_STREAMS)[number]) =>
+      (await repo.listEvents(user.id, name, MAX_EVENTS_PER_STREAM)).map(wireEvent);
+    return {
+      exportedAt: new Date(now()).toISOString(),
+      account: await service.profile(user),
+      documents,
+      sessionEvents: await stream('events'),
+      moodEntries: await stream('mood'),
+    };
+  });
 
   /** Mood data may be stored only while the user agrees to it (settings, else onboarding). */
   async function moodConsent(userId: string): Promise<boolean> {

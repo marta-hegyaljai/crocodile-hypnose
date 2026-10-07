@@ -74,6 +74,13 @@ export interface ProfileState {
   recordSession(event: SessionCompletedEvent): Promise<void>;
   /** Records a mood check-in once. The caller checks consent. */
   recordMood(entry: MoodEntry): Promise<void>;
+  /**
+   * Turns mood consent on or off. Off deletes every mood entry: on the device (pending ones
+   * included), in the onboarding answers, and on the server.
+   */
+  setMoodConsent(enabled: boolean): Promise<void>;
+  /** The server's copy of everything stored about the user, as JSON text (pending changes sent first). */
+  exportData(): Promise<string>;
   /** Asks the server now: pending reads first, then pending writes (e.g. when back online). */
   flush(): Promise<void>;
   /** Forgets everything, including the device copies (they hold health data). */
@@ -189,11 +196,33 @@ export function createProfileStore({
         loadError: get().status === 'loading' ? (o.syncError ?? null) : null,
       });
     };
-    onboarding.subscribe(mirror);
-    settings.subscribe(mirror);
+    /**
+     * Mood data exists only while the user agrees (health data). Whenever the settings say no,
+     * whatever mood data this device holds goes: after a withdrawal here, on another device or tab,
+     * or from a server copy that arrives late.
+     */
+    const enforceMoodConsent = () => {
+      const s = settings.getState();
+      if (s.source === 'none' || s.doc.moodConsent) return;
+      const m = moods.getState();
+      if (Object.keys(m.doc.items).length > 0) void m.update(() => emptyLog());
+      const o = onboarding.getState().doc;
+      if (o.firstSession.moodBefore !== null || o.firstSession.moodAfter !== null) {
+        void onboarding.getState().update((doc) => ({
+          ...doc,
+          firstSession: { ...doc.firstSession, moodBefore: null, moodAfter: null },
+        }));
+      }
+    };
+    const onChange = () => {
+      enforceMoodConsent();
+      mirror();
+    };
+    onboarding.subscribe(onChange);
+    settings.subscribe(onChange);
     progress.subscribe(mirror);
     sessions.subscribe(mirror);
-    moods.subscribe(mirror);
+    moods.subscribe(onChange);
 
     return {
       status: 'idle',
@@ -230,6 +259,28 @@ export function createProfileStore({
       updateProgress: (change) => progress.getState().update(change),
       recordSession: (event) => sessions.getState().update((doc) => addToLog(doc, event)),
       recordMood: (entry) => moods.getState().update((doc) => addToLog(doc, entry)),
+
+      async setMoodConsent(enabled) {
+        await settings
+          .getState()
+          .update((doc) => (doc.moodConsent === enabled ? doc : { ...doc, moodConsent: enabled }));
+        if (enabled) return;
+        // The settings reach the server first (it purges mood data when it stores them), then the
+        // explicit delete. A later "on" must not be undone by a late delete, hence the check.
+        await settings.getState().flush();
+        if (settings.getState().doc.moodConsent) return;
+        try {
+          await withToken((token) => client.deleteMood(token));
+        } catch {
+          // Offline: the settings write above (retried) makes the server purge it.
+        }
+      },
+
+      async exportData() {
+        await get().flush();
+        const data = await withToken((token) => client.exportData(token));
+        return JSON.stringify(data, null, 2);
+      },
 
       async flush() {
         // The documents first: the server checks mood consent against the stored settings.

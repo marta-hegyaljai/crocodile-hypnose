@@ -58,6 +58,8 @@ export async function makeApp(overrides: Partial<ServerConfig> = {}): Promise<Te
 }
 
 export const HYPNOSE = 'mhp-hypnose';
+/** The password the helpers sign up and sign in with. */
+export const PASSWORD = 'correct horse';
 export const COACHING = 'mhp-coaching';
 
 export async function signUp(
@@ -95,11 +97,17 @@ export async function refresh(ctx: TestContext, refreshToken: string, clientId =
   });
 }
 
-export async function me(ctx: TestContext, accessToken: string, method: 'GET' | 'DELETE' = 'GET') {
+export async function me(
+  ctx: TestContext,
+  accessToken: string,
+  method: 'GET' | 'DELETE' = 'GET',
+  password: string | null = method === 'DELETE' ? PASSWORD : null,
+) {
   return ctx.app.inject({
     method,
     url: '/me',
     headers: { authorization: `Bearer ${accessToken}` },
+    ...(password === null ? {} : { payload: { password } }),
   });
 }
 

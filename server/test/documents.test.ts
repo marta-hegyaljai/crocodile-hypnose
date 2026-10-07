@@ -279,6 +279,15 @@ describe('GET/PUT /me/settings', () => {
     assert.equal((await get('settings')).json<DocBody>().settings?.crocName, 'Croc 🐊');
   });
 
+  test('the reduced-motion override is optional and a boolean or null', async () => {
+    for (const value of [true, false, null]) {
+      const res = await put('settings', settings({ reducedMotion: value }));
+      assert.equal(res.statusCode, 200);
+      assert.equal(res.json<DocBody>().settings?.reducedMotion, value);
+    }
+    assert.equal((await put('settings', settings({ reducedMotion: 'yes' }))).statusCode, 400);
+  });
+
   test('validates the reminder time and the enums', async () => {
     const cases: [string, Record<string, unknown>][] = [
       ['bad time', { reminder: { enabled: true, time: '25:00', timeOfDay: 'morning' } }],

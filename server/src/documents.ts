@@ -168,6 +168,8 @@ const settingsV1 = {
     },
     sound: bool,
     haptics: bool,
+    /** Reduced-motion override: null follows the device. Optional (added after the first release). */
+    reducedMotion: nullableBool,
   },
 } as const;
 
@@ -223,6 +225,16 @@ export const CURRENT_VERSION: Record<DocumentKind, number> = {
 export function bodySchemaFor(kind: DocumentKind): object {
   const versions = Object.values(DOCUMENT_SCHEMAS[kind]);
   return versions.length === 1 ? versions[0]! : { anyOf: versions };
+}
+
+/**
+ * What a mood withdrawal leaves of an onboarding document: no stored first-session moods and no
+ * consent. Identical documents (nothing to scrub) come back as null.
+ */
+export function withoutMoods(data: Doc): Doc | null {
+  const first = record(data.firstSession);
+  if (first.moodBefore === null && first.moodAfter === null) return null;
+  return { ...data, firstSession: { ...first, moodBefore: null, moodAfter: null } };
 }
 
 const CONTROL_RE = /[\u0000-\u001f\u007f]/;

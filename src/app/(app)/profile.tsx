@@ -1,145 +1,100 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { StyleSheet, View, type Text as RNText } from 'react-native';
+import { router } from 'expo-router';
+import React from 'react';
+import { StyleSheet, View } from 'react-native';
 
 import { t } from '@/copy';
-import { describeAuthError, type DescribedError } from '@/features/auth/describeError';
-import { holdUntil } from '@/features/auth/holdUntil';
 import { useSubmit } from '@/features/auth/useSubmit';
-import { TabPlaceholder } from '@/features/home/TabPlaceholder';
+import { useTapShield } from '@/features/layout/TapShield';
+import { ProfileHeader, ProfileSummaryCard, RenameCroc } from '@/features/profile/ProfileHeader';
+import { PreferenceSettings, ReminderSettings } from '@/features/profile/SettingsSections';
 import { useAuth } from '@/services/auth';
+import { isAuthError } from '@/services/auth/types';
 import { useProfile } from '@/services/profile';
-import { radius, space, useTheme } from '@/theme';
-import { Button, Notice, Reveal, Text, moveFocus } from '@/ui';
+import { space } from '@/theme';
+import { Button, Card, Screen, Text } from '@/ui';
 
 /**
- * Profile (placeholder until step 8): who is signed in, sign out and account deletion (moved
- * here from the step 2 home).
+ * Profile and settings (Daylight): the croc and its name, a summary, every setting (each takes
+ * effect at once and syncs), links to safety, help and privacy, and sign out.
  */
 export default function ProfileTab() {
-  const { colors } = useTheme();
-  const user = useAuth((s) => s.user);
   const signOut = useAuth((s) => s.signOut);
-  const deleteAccount = useAuth((s) => s.deleteAccount);
   const flushProfile = useProfile((s) => s.flush);
-  const [confirmingDelete, setConfirmingDelete] = useState(false);
-  const [deleteError, setDeleteError] = useState<DescribedError | null>(null);
-  const confirmTitleRef = useRef<View>(null);
-  const confirmTitleTextRef = useRef<RNText>(null);
-  const deleteButtonRef = useRef<View>(null);
-  const confirmOpened = useRef(false);
-
-  // Focus follows the confirmation: into its title when it opens, back to "Delete account" on cancel.
-  useEffect(() => {
-    if (confirmingDelete) {
-      confirmOpened.current = true;
-      moveFocus(confirmTitleRef.current ?? confirmTitleTextRef.current);
-    } else if (confirmOpened.current) {
-      confirmOpened.current = false;
-      moveFocus(deleteButtonRef.current);
-    }
-  }, [confirmingDelete]);
+  const pendingOffline = useProfile(
+    (s) => s.dirty && isAuthError(s.syncError) && s.syncError.isConnectivity,
+  );
+  const shield = useTapShield();
 
   const signingOut = useSubmit(async () => {
     // Pending app data (progress included) goes to the server first, while the token is valid.
     await flushProfile();
     await signOut();
   });
-  const deleting = useSubmit(async () => {
-    const startedAt = Date.now();
-    setDeleteError(null);
-    try {
-      await deleteAccount();
-    } catch (err) {
-      await holdUntil(startedAt);
-      setDeleteError(describeAuthError(err));
-    }
-  });
+
+  const open = (href: '/settings/help' | '/settings/privacy') => {
+    // The page opens where the finger is: swallow the rest of a double tap.
+    shield();
+    router.push(href);
+  };
 
   return (
-    <TabPlaceholder
-      title={t('tabs.profile')}
-      message={t('tabsPlaceholder.profile')}
-      expression={confirmingDelete ? 'calm' : 'happy'}
-      testID="profile-screen"
-    >
-      <View style={[styles.panel, { backgroundColor: colors.surface }]}>
-        <Text variant="body" tone="secondary" align="center" testID="profile-email">
-          {t('home.signedInAs', { email: user?.email ?? '' })}
-        </Text>
-        {confirmingDelete ? (
-          <Reveal style={styles.block} testID="delete-confirm">
-            <View
-              ref={confirmTitleRef}
-              tabIndex={-1}
-              style={styles.focusTarget}
-              testID="delete-confirm-title"
-            >
-              <Text variant="heading" heading ref={confirmTitleTextRef}>
-                {t('account.deleteTitle')}
-              </Text>
-            </View>
-            <Text variant="body" tone="secondary">
-              {t('account.deleteBody')}
+    <Screen testID="profile-screen" contentStyle={styles.screen}>
+      <View style={styles.column}>
+        <ProfileHeader />
+        {pendingOffline ? (
+          <Text variant="caption" tone="secondary" testID="profile-sync-pending">
+            {t('profile.syncPending')}
+          </Text>
+        ) : null}
+        <ProfileSummaryCard />
+        <RenameCroc />
+        <ReminderSettings />
+        <PreferenceSettings />
+        <View style={styles.links}>
+          <Text variant="subheading" heading>
+            {t('profile.moreTitle')}
+          </Text>
+          <Card
+            tone="raised"
+            padding="md"
+            onPress={() => open('/settings/help')}
+            accessibilityLabel={`${t('profile.helpLink')}, ${t('profile.helpLinkDetail')}`}
+            testID="profile-help-link"
+          >
+            <Text variant="bodyStrong">{t('profile.helpLink')}</Text>
+            <Text variant="caption" tone="secondary">
+              {t('profile.helpLinkDetail')}
             </Text>
-            {deleteError ? (
-              <Notice
-                tone="error"
-                message={t(deleteError.key, deleteError.params)}
-                testID="delete-error"
-              />
-            ) : null}
-            {/* The safe choice comes first in reading and tab order. */}
-            <Button
-              label={t('account.deleteCancel')}
-              variant="secondary"
-              size="lg"
-              fullWidth
-              disabled={deleting.pending}
-              onPress={() => {
-                setConfirmingDelete(false);
-                setDeleteError(null);
-              }}
-              testID="delete-cancel"
-            />
-            <Button
-              label={t('account.deleteConfirm')}
-              variant="danger"
-              fullWidth
-              loading={deleting.pending}
-              onPress={() => void deleting.run()}
-              testID="delete-confirm-button"
-            />
-          </Reveal>
-        ) : (
-          <View style={styles.block}>
-            <Button
-              label={t('home.signOut')}
-              variant="secondary"
-              size="lg"
-              fullWidth
-              loading={signingOut.pending}
-              onPress={() => void signingOut.run()}
-              testID="profile-sign-out"
-            />
-            <Button
-              ref={deleteButtonRef}
-              label={t('account.delete')}
-              variant="ghost"
-              fullWidth
-              disabled={signingOut.pending}
-              onPress={() => setConfirmingDelete(true)}
-              testID="profile-delete-account"
-            />
-          </View>
-        )}
+          </Card>
+          <Card
+            tone="raised"
+            padding="md"
+            onPress={() => open('/settings/privacy')}
+            accessibilityLabel={`${t('profile.privacyLink')}, ${t('profile.privacyLinkDetail')}`}
+            testID="profile-privacy-link"
+          >
+            <Text variant="bodyStrong">{t('profile.privacyLink')}</Text>
+            <Text variant="caption" tone="secondary">
+              {t('profile.privacyLinkDetail')}
+            </Text>
+          </Card>
+        </View>
+        <Button
+          label={t('home.signOut')}
+          variant="secondary"
+          size="lg"
+          fullWidth
+          loading={signingOut.pending}
+          onPress={() => void signingOut.run()}
+          testID="profile-sign-out"
+        />
       </View>
-    </TabPlaceholder>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  panel: { borderRadius: radius.lg, padding: space.lg, gap: space.md, marginTop: space.lg },
-  // Programmatic focus target only (tabIndex -1): no browser outline.
-  focusTarget: { outlineWidth: 0 } as object,
-  block: { gap: space.md },
+  screen: { paddingTop: space.lg, paddingBottom: space.xxxl },
+  column: { width: '100%', maxWidth: 640, alignSelf: 'center', gap: space.lg },
+  links: { gap: space.sm },
 });

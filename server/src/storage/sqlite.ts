@@ -411,6 +411,13 @@ export class SqliteAccountRepository implements AccountRepository {
     return rows.map(toEvent);
   }
 
+  async deleteEvents(userId: string, stream: string): Promise<number> {
+    const result = this.db
+      .prepare('DELETE FROM user_events WHERE user_id = ? AND stream = ?')
+      .run(userId, stream);
+    return Number(result.changes);
+  }
+
   async close(): Promise<void> {
     if (this.db.isOpen) this.db.close();
   }
