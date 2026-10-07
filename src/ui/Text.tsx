@@ -20,8 +20,8 @@ export interface TextProps extends RNTextProps {
   align?: TextStyle['textAlign'];
   /** Explicit colour, overrides `tone`. */
   color?: string;
-  /** Expose as a heading to assistive technology. */
-  heading?: boolean;
+  /** Expose as a heading to assistive technology; a number sets its level (1 = page title). */
+  heading?: boolean | 1 | 2 | 3 | 4;
   /**
    * Marks copy that is still a placeholder for MHP's text (dashed underline in dev mode).
    * Auto-detected when `children` is a single string from the copy module.
@@ -53,6 +53,7 @@ export function Text({
       ref={ref}
       maxFontSizeMultiplier={maxFontSizeMultiplier}
       accessibilityRole={heading ? 'header' : undefined}
+      aria-level={typeof heading === 'number' ? heading : undefined}
       {...rest}
       style={[
         typeScale[variant],

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 
 import { t } from '@/copy';
 import { localContent } from '@/content/repository';
@@ -11,20 +11,25 @@ import { useProfile } from '@/services/profile';
 import { palette, radius, space, useTheme } from '@/theme';
 import { Button, Card, Notice, Text, TextField } from '@/ui';
 
+import { Section } from './Section';
 import { summarize } from './settingsLogic';
 
-/** The croc, its name and the account email. */
+/**
+ * The croc hosts the page: its name is the title (level 1), the account email sits under it in
+ * full (it wraps rather than clips, so the account is verifiable before export or delete).
+ */
 export function ProfileHeader() {
   const user = useAuth((s) => s.user);
   const crocName = useProfile((s) => s.settings.crocName) ?? t('croc.defaultName');
+  const { colors } = useTheme();
   return (
     <View style={styles.header}>
-      <View style={styles.avatar}>
+      <View style={[styles.avatar, { borderColor: colors.surfaceRaised }]}>
         <Croc
           stage="hatchling"
           pose="peek"
           water="inline"
-          width={88}
+          width={96}
           expression="happy"
           name={crocName}
           animated={false}
@@ -32,10 +37,10 @@ export function ProfileHeader() {
         />
       </View>
       <View style={styles.headerText}>
-        <Text variant="title" heading numberOfLines={1} testID="profile-croc-name">
+        <Text variant="title" heading={1} numberOfLines={2} testID="profile-croc-name">
           {crocName}
         </Text>
-        <Text variant="caption" tone="secondary" numberOfLines={1} testID="profile-email">
+        <Text variant="caption" tone="secondary" style={styles.email} testID="profile-email">
           {t('home.signedInAs', { email: user?.email ?? '' })}
         </Text>
       </View>
@@ -61,7 +66,7 @@ export function ProfileSummaryCard() {
   ];
   return (
     <Card tone="raised" padding="md" testID="profile-summary">
-      <Text variant="subheading" heading style={styles.summaryTitle}>
+      <Text variant="subheading" heading={2} style={styles.summaryTitle}>
         {t('profile.summaryTitle')}
       </Text>
       <View style={styles.stats}>
@@ -111,10 +116,7 @@ export function RenameCroc() {
   };
 
   return (
-    <View style={styles.stack}>
-      <Text variant="subheading" heading>
-        {t('profile.renameTitle')}
-      </Text>
+    <Section title={t('profile.renameTitle')}>
       <TextField
         label={t('profile.nameLabel')}
         value={text}
@@ -138,24 +140,25 @@ export function RenameCroc() {
       {done && unchanged ? (
         <Notice tone="success" message={t('profile.nameSaved')} testID="profile-name-saved" />
       ) : null}
-    </View>
+    </Section>
   );
 }
 
 const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', gap: space.md },
   avatar: {
-    width: 88,
-    height: 88,
-    borderRadius: 44,
+    width: 96,
+    height: 96,
+    borderRadius: 48,
     overflow: 'hidden',
     backgroundColor: palette.shallows,
-    borderWidth: 2,
-    borderColor: palette.white,
+    borderWidth: 3,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerText: { flex: 1, gap: space.xxs },
+  headerText: { flex: 1, minWidth: 0, gap: space.xxs },
+  // A long address breaks inside the word instead of being clipped (web only; native wraps).
+  email: Platform.select({ web: { wordBreak: 'break-word' } as object, default: {} }),
   summaryTitle: { marginBottom: space.sm },
   stats: { flexDirection: 'row', gap: space.sm },
   stat: {
@@ -165,5 +168,4 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     padding: space.sm,
   },
-  stack: { gap: space.sm },
 });

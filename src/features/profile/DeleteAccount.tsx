@@ -80,7 +80,7 @@ export function DeleteAccount() {
   return (
     <Reveal style={styles.block} testID="delete-confirm">
       <View ref={titleRef} tabIndex={-1} style={styles.focusTarget} testID="delete-confirm-title">
-        <Text variant="heading" heading ref={titleTextRef}>
+        <Text variant="heading" heading={3} ref={titleTextRef}>
           {t('account.deleteTitle')}
         </Text>
       </View>

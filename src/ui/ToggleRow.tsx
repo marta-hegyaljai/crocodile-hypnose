@@ -11,6 +11,8 @@ import { spaceActivates } from './webKeys';
 export interface ToggleRowProps {
   label: string;
   detail?: string;
+  /** The detail line can carry a result ("...entries are deleted"); tests find it by this id. */
+  detailTestID?: string;
   value: boolean;
   onValueChange: (value: boolean) => void;
   disabled?: boolean;
@@ -25,6 +27,7 @@ export interface ToggleRowProps {
 export function ToggleRow({
   label,
   detail,
+  detailTestID,
   value,
   onValueChange,
   disabled = false,
@@ -56,7 +59,7 @@ export function ToggleRow({
           {label}
         </Text>
         {detail ? (
-          <Text variant="caption" tone="secondary">
+          <Text variant="caption" tone="secondary" testID={detailTestID}>
             {detail}
           </Text>
         ) : null}

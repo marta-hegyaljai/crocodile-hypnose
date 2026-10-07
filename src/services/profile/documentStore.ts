@@ -92,9 +92,18 @@ function stableJson(value: unknown): string {
   );
 }
 
-/** Equal apart from the timestamp (the server may clamp it, or keep its own). */
+/**
+ * Equal apart from the timestamps: the server may clamp `updatedAt` and the per-field stamps to
+ * its own clock (a client clock that runs ahead), so a clamped answer is still the same content.
+ * Comparing the stamps would never settle: every push is clamped anew.
+ */
 function sameContent<T extends SyncedDocument>(a: T, b: T): boolean {
-  return stableJson({ ...a, updatedAt: 0 }) === stableJson({ ...b, updatedAt: 0 });
+  return stableJson(withoutStamps(a)) === stableJson(withoutStamps(b));
+}
+
+function withoutStamps<T extends SyncedDocument>(doc: T): Record<string, unknown> {
+  const { updatedAt: _updatedAt, fieldsAt: _fieldsAt, ...rest } = doc as T & { fieldsAt?: unknown };
+  return rest;
 }
 
 /** A server answer that means the document itself was refused, so a retry cannot help. */

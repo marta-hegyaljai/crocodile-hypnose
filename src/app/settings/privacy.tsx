@@ -4,6 +4,7 @@ import { StyleSheet, View } from 'react-native';
 import { t } from '@/copy';
 import { DeleteAccount } from '@/features/profile/DeleteAccount';
 import { ExportData } from '@/features/profile/ExportData';
+import { Section } from '@/features/profile/Section';
 import { SubPage } from '@/features/profile/SubPage';
 import { useAuth } from '@/services/auth';
 import { space } from '@/theme';
@@ -16,7 +17,7 @@ export default function PrivacyScreen() {
     <SubPage title={t('privacy.title')} testID="privacy-screen">
       <Card tone="surface" padding="lg">
         <View style={styles.stack}>
-          <Text variant="subheading" heading>
+          <Text variant="subheading" heading={2}>
             {t('privacy.storedTitle')}
           </Text>
           <Text variant="body" tone="secondary" testID="privacy-stored">
@@ -24,19 +25,13 @@ export default function PrivacyScreen() {
           </Text>
         </View>
       </Card>
-      <View style={styles.stack}>
-        <Text variant="subheading" heading>
-          {t('privacy.exportTitle')}
-        </Text>
+      <Section title={t('privacy.exportTitle')}>
         <ExportData />
-      </View>
-      <View style={styles.stack}>
-        <Text variant="subheading" heading>
-          {t('privacy.deleteTitle')}
-        </Text>
+      </Section>
+      <Section title={t('privacy.deleteTitle')}>
         {/* Keyed on the account: a confirmation (and a typed password) never carries over to another user. */}
         <DeleteAccount key={userId ?? 'none'} />
-      </View>
+      </Section>
     </SubPage>
   );
 }

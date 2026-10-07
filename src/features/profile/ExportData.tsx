@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Platform, ScrollView, Share, StyleSheet, View } from 'react-native';
+import { Platform, ScrollView, Share, StyleSheet, View, useWindowDimensions } from 'react-native';
 
 import { t } from '@/copy';
 import { describeAuthError } from '@/features/auth/describeError';
@@ -35,6 +35,9 @@ export function ExportData() {
   const [json, setJson] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  // The block takes most of the screen, so the JSON reads as a document, not a peephole.
+  const { height } = useWindowDimensions();
+  const blockHeight = Math.max(320, Math.round(height * 0.6));
 
   const exporting = useSubmit(async () => {
     setError(null);
@@ -74,7 +77,7 @@ export function ExportData() {
           >
             <ScrollView
               nestedScrollEnabled
-              style={styles.scroll}
+              style={{ maxHeight: blockHeight }}
               accessibilityLabel={t('privacy.exportLabel')}
             >
               <Text variant="caption" selectable style={styles.mono} testID="export-json">
@@ -104,7 +107,6 @@ export function ExportData() {
 const styles = StyleSheet.create({
   stack: { gap: space.sm },
   block: { borderRadius: radius.md, borderWidth: 1, padding: space.md },
-  scroll: { maxHeight: 260 },
   mono: {
     fontFamily: Platform.select({ ios: 'Menlo', android: 'monospace', default: 'monospace' }),
   },

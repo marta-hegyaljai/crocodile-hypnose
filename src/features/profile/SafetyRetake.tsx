@@ -60,7 +60,7 @@ export function SafetyRetake() {
     return (
       <Card tone="raised" padding="lg" testID="retake-info">
         <View style={styles.stack}>
-          <Text variant="subheading" heading>
+          <Text variant="subheading" heading={2}>
             {t('help.retakeInfoTitle')}
           </Text>
           <Text variant="body" testID="retake-info-body">
@@ -87,7 +87,7 @@ export function SafetyRetake() {
 
   return (
     <View style={styles.stack}>
-      <Text variant="subheading" heading>
+      <Text variant="subheading" heading={2}>
         {t('help.retakeTitle')}
       </Text>
       <Text variant="body" tone="secondary">

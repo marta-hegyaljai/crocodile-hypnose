@@ -9,20 +9,10 @@ import { useProfile } from '@/services/profile';
 import type { SessionLength } from '@/services/profile/types';
 import { reminders } from '@/services/reminders/reminders';
 import { space } from '@/theme';
-import { Notice, Text, TextField, ToggleRow } from '@/ui';
+import { Text, TextField, ToggleRow } from '@/ui';
 
+import { Rows, Section } from './Section';
 import { isValidTime, setReminderEnabled, setReminderTime, timeOfDayOf } from './settingsLogic';
-
-function Group({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <View style={styles.group}>
-      <Text variant="subheading" heading>
-        {title}
-      </Text>
-      {children}
-    </View>
-  );
-}
 
 /** Daily reminder: on/off and the time (morning, evening, or any HH:MM). */
 export function ReminderSettings() {
@@ -44,7 +34,7 @@ export function ReminderSettings() {
   };
 
   return (
-    <Group title={t('profile.reminderTitle')}>
+    <Section title={t('profile.reminderTitle')}>
       <ToggleRow
         label={t('profile.reminderToggle')}
         value={reminder.enabled}
@@ -53,7 +43,7 @@ export function ReminderSettings() {
       />
       {reminder.enabled ? (
         <View style={styles.group}>
-          <View style={styles.row}>
+          <View style={styles.row} accessibilityRole="radiogroup" accessibilityLabel={t('profile.reminderTimeLabel')}>
             <ChoiceCard
               role="radio"
               label={t('profile.reminderMorning')}
@@ -93,7 +83,7 @@ export function ReminderSettings() {
           {t('profile.reminderUnsupported')}
         </Text>
       ) : null}
-    </Group>
+    </Section>
   );
 }
 
@@ -114,23 +104,29 @@ export function PreferenceSettings() {
   ];
   return (
     <>
-      <Group title={t('profile.settingsTitle')}>
-        <ToggleRow
-          label={t('profile.soundToggle')}
-          value={settings.sound}
-          onValueChange={(on) => void updateSettings((doc) => ({ ...doc, sound: on }))}
-          testID="setting-sound"
-        />
-        <ToggleRow
-          label={t('profile.hapticsToggle')}
-          value={settings.haptics}
-          onValueChange={(on) => void updateSettings((doc) => ({ ...doc, haptics: on }))}
-          testID="setting-haptics"
-        />
-        <MoodConsentSetting />
-      </Group>
-      <Group title={t('profile.lengthTitle')}>
-        <View style={styles.column} accessibilityRole="radiogroup">
+      <Section title={t('profile.settingsTitle')}>
+        <Rows>
+          <ToggleRow
+            label={t('profile.soundToggle')}
+            value={settings.sound}
+            onValueChange={(on) => void updateSettings((doc) => ({ ...doc, sound: on }))}
+            testID="setting-sound"
+          />
+          <ToggleRow
+            label={t('profile.hapticsToggle')}
+            value={settings.haptics}
+            onValueChange={(on) => void updateSettings((doc) => ({ ...doc, haptics: on }))}
+            testID="setting-haptics"
+          />
+          <MoodConsentSetting />
+        </Rows>
+      </Section>
+      <Section title={t('profile.lengthTitle')}>
+        <View
+          style={styles.column}
+          accessibilityRole="radiogroup"
+          accessibilityLabel={t('profile.lengthTitle')}
+        >
           {lengths.map((l) => (
             <ChoiceCard
               key={l.value}
@@ -146,9 +142,13 @@ export function PreferenceSettings() {
             />
           ))}
         </View>
-      </Group>
-      <Group title={t('profile.motionTitle')}>
-        <View style={styles.column} accessibilityRole="radiogroup">
+      </Section>
+      <Section title={t('profile.motionTitle')}>
+        <View
+          style={styles.column}
+          accessibilityRole="radiogroup"
+          accessibilityLabel={t('profile.motionTitle')}
+        >
           {motions.map((m) => (
             <ChoiceCard
               key={m.id}
@@ -166,32 +166,32 @@ export function PreferenceSettings() {
             />
           ))}
         </View>
-      </Group>
+      </Section>
     </>
   );
 }
 
-/** Mood consent. Off deletes the stored entries (device and server); the screen says so. */
+/**
+ * Mood consent. Off deletes the stored entries (device and server): the consequence is written
+ * in the row itself, under the switch the finger is on, so it is never below the fold.
+ */
 function MoodConsentSetting() {
   const consent = useProfile((s) => s.settings.moodConsent);
   const setMoodConsent = useProfile((s) => s.setMoodConsent);
   const [deleted, setDeleted] = useState(false);
+  const justDeleted = deleted && !consent;
   return (
-    <>
-      <ToggleRow
-        label={t('profile.moodToggle')}
-        detail={t('profile.moodDetail')}
-        value={consent}
-        onValueChange={(on) => {
-          setDeleted(!on);
-          void setMoodConsent(on);
-        }}
-        testID="setting-mood"
-      />
-      {deleted && !consent ? (
-        <Notice tone="success" message={t('profile.moodDeleted')} testID="mood-deleted" />
-      ) : null}
-    </>
+    <ToggleRow
+      label={t('profile.moodToggle')}
+      detail={justDeleted ? t('profile.moodDeleted') : t('profile.moodDetail')}
+      detailTestID={justDeleted ? 'mood-deleted' : undefined}
+      value={consent}
+      onValueChange={(on) => {
+        setDeleted(!on);
+        void setMoodConsent(on);
+      }}
+      testID="setting-mood"
+    />
   );
 }
 

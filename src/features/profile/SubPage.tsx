@@ -32,7 +32,7 @@ export function SubPage({
             testID="subpage-back"
           />
         </View>
-        <Text variant="title" heading>
+        <Text variant="title" heading={1}>
           {title}
         </Text>
         {children}

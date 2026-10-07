@@ -11,8 +11,8 @@ import { PreferenceSettings, ReminderSettings } from '@/features/profile/Setting
 import { useAuth } from '@/services/auth';
 import { isAuthError } from '@/services/auth/types';
 import { useProfile } from '@/services/profile';
-import { space } from '@/theme';
-import { Button, Card, Screen, Text } from '@/ui';
+import { space, useTheme } from '@/theme';
+import { Button, Card, Icon, Screen, Text } from '@/ui';
 
 /**
  * Profile and settings (Daylight): the croc and its name, a summary, every setting (each takes
@@ -25,6 +25,7 @@ export default function ProfileTab() {
     (s) => s.dirty && isAuthError(s.syncError) && s.syncError.isConnectivity,
   );
   const shield = useTapShield();
+  const { colors } = useTheme();
 
   const signingOut = useSubmit(async () => {
     // Pending app data (progress included) goes to the server first, while the token is valid.
@@ -54,33 +55,37 @@ export default function ProfileTab() {
           <PreferenceSettings />
         </SettingsGate>
         <View style={styles.links}>
-          <Text variant="subheading" heading>
+          <Text variant="subheading" heading={2} style={styles.linksTitle}>
             {t('profile.moreTitle')}
           </Text>
-          <Card
-            tone="raised"
-            padding="md"
-            onPress={() => open('/settings/help')}
-            accessibilityLabel={`${t('profile.helpLink')}, ${t('profile.helpLinkDetail')}`}
-            testID="profile-help-link"
-          >
-            <Text variant="bodyStrong">{t('profile.helpLink')}</Text>
-            <Text variant="caption" tone="secondary">
-              {t('profile.helpLinkDetail')}
-            </Text>
-          </Card>
-          <Card
-            tone="raised"
-            padding="md"
-            onPress={() => open('/settings/privacy')}
-            accessibilityLabel={`${t('profile.privacyLink')}, ${t('profile.privacyLinkDetail')}`}
-            testID="profile-privacy-link"
-          >
-            <Text variant="bodyStrong">{t('profile.privacyLink')}</Text>
-            <Text variant="caption" tone="secondary">
-              {t('profile.privacyLinkDetail')}
-            </Text>
-          </Card>
+          {(
+            [
+              ['help', '/settings/help', 'profile.helpLink', 'profile.helpLinkDetail'],
+              ['privacy', '/settings/privacy', 'profile.privacyLink', 'profile.privacyLinkDetail'],
+            ] as const
+          ).map(([id, href, label, detail]) => (
+            <Card
+              key={id}
+              tone="raised"
+              padding="md"
+              onPress={() => open(href)}
+              accessibilityLabel={`${t(label)}, ${t(detail)}`}
+              testID={`profile-${id}-link`}
+            >
+              <View style={styles.linkRow}>
+                <View style={styles.linkText}>
+                  <Text variant="bodyStrong">{t(label)}</Text>
+                  <Text variant="caption" tone="secondary">
+                    {t(detail)}
+                  </Text>
+                </View>
+                {/* A chevron: the card opens a page (the back icon, mirrored). */}
+                <View style={styles.chevron}>
+                  <Icon name="back" size={20} color={colors.textSecondary} />
+                </View>
+              </View>
+            </Card>
+          ))}
         </View>
         <Button
           label={t('home.signOut')}
@@ -100,4 +105,8 @@ const styles = StyleSheet.create({
   screen: { paddingTop: space.lg, paddingBottom: space.xxxl },
   column: { width: '100%', maxWidth: 640, alignSelf: 'center', gap: space.lg },
   links: { gap: space.sm },
+  linksTitle: { paddingHorizontal: space.xs },
+  linkRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
+  linkText: { flex: 1, gap: space.xxs },
+  chevron: { transform: [{ scaleX: -1 }] },
 });

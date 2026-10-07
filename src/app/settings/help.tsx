@@ -6,7 +6,7 @@ import { SafetyRetake } from '@/features/profile/SafetyRetake';
 import { SettingsGate } from '@/features/profile/SettingsGate';
 import { SubPage } from '@/features/profile/SubPage';
 import { space } from '@/theme';
-import { Card, Text } from '@/ui';
+import { Card, Notice, Text } from '@/ui';
 
 /** Safety and help: safety information, crisis contacts (placeholders for MHP), the safety check. */
 export default function HelpScreen() {
@@ -14,7 +14,7 @@ export default function HelpScreen() {
     <SubPage title={t('help.title')} testID="help-screen">
       <Card tone="raised" padding="lg">
         <View style={styles.stack}>
-          <Text variant="subheading" heading>
+          <Text variant="subheading" heading={2}>
             {t('help.infoTitle')}
           </Text>
           <Text variant="body" testID="help-info">
@@ -24,7 +24,7 @@ export default function HelpScreen() {
       </Card>
       <Card tone="surface" padding="lg" testID="help-contacts">
         <View style={styles.stack}>
-          <Text variant="subheading" heading>
+          <Text variant="subheading" heading={2}>
             {t('help.contactsTitle')}
           </Text>
           <Text variant="body" tone="secondary">
@@ -46,9 +46,7 @@ export default function HelpScreen() {
           </View>
         </View>
       </Card>
-      <Text variant="caption" tone="secondary" testID="help-therapy-note">
-        {t('help.therapyNote')}
-      </Text>
+      <Notice tone="info" message={t('help.therapyNote')} testID="help-therapy-note" />
       <SettingsGate>
         <SafetyRetake />
       </SettingsGate>
