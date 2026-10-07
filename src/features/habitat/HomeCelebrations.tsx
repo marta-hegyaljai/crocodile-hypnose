@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Modal, StyleSheet, View, useWindowDimensions } from 'react-native';
 import Animated, {
   Easing,
@@ -11,6 +11,7 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { t } from '@/copy';
+import { useTapShield } from '@/features/layout/TapShield';
 import type { CrocStage } from '@/illustration';
 import { CelebrationBurst, Croc, Lagoon } from '@/illustration';
 import { FIGURE_H, FIGURE_W, GROUND_Y } from '@/illustration/croc/geometry';
@@ -32,6 +33,8 @@ import { Button, Chip, Icon, IconButton, Reveal, Screen, Text } from '@/ui';
 
 /** How long the croc stays at its old size before it grows (ms). */
 const GROW_AFTER = 900;
+/** How long the weekly goal card stays before it goes by itself (ms). */
+export const WEEKLY_TOAST_MS = 8000;
 /** The sheet's rough height, to leave the croc room above it before layout settles (pt). */
 const SHEET_GUESS = 300;
 const STAGES: readonly CrocStage[] = ['hatchling', 'juvenile', 'adult', 'grand'];
@@ -253,6 +256,11 @@ function WeeklyReached({
     const timer = setTimeout(() => setBurst(true), 50);
     return () => clearTimeout(timer);
   }, []);
+  // A small celebration, not a notice to dismiss: it leaves by itself.
+  useEffect(() => {
+    const timer = setTimeout(onClose, WEEKLY_TOAST_MS);
+    return () => clearTimeout(timer);
+  }, [onClose]);
   return (
     <View style={[styles.toastWrap, { bottom: insets.bottom + space.lg }]} pointerEvents="box-none">
       <View style={styles.toast} accessibilityRole="alert" testID="weekly-reached">
@@ -284,6 +292,7 @@ function WeeklyReached({
  */
 export function HomeCelebrations({ crocName, active }: { crocName: string; active: boolean }) {
   const store = useGamification((s) => s);
+  const shield = useTapShield();
   const stage = useGrowthStage();
   const now = useNow();
   const { days, target, reached } = useWeeklyGoal();
@@ -292,6 +301,24 @@ export function HomeCelebrations({ crocName, active }: { crocName: string; activ
   const week = currentWeek(now, store.goal.timeZone ?? deviceTimeZone());
   const weekDue =
     settled && reached && (store.goal.celebratedWeek === null || store.goal.celebratedWeek < week);
+  // The week is marked celebrated the moment the card appears (so a reload does not bring it
+  // back); the card itself is held here until it is dismissed or times out.
+  const [toastWeek, setToastWeek] = useState<number | null>(null);
+  const markWeek = store.markWeekCelebrated;
+  useEffect(() => {
+    // Leaving the tab drops the card; arriving with the goal newly reached shows it.
+    if (!active) {
+      const drop = setTimeout(() => setToastWeek(null), 0);
+      return () => clearTimeout(drop);
+    }
+    if (growTo || !weekDue) return;
+    const show = setTimeout(() => {
+      setToastWeek(week);
+      void markWeek(week);
+    }, 0);
+    return () => clearTimeout(show);
+  }, [active, growTo, weekDue, week, markWeek]);
+  const closeToast = useCallback(() => setToastWeek(null), []);
 
   if (!active) return null;
   if (growTo) {
@@ -302,19 +329,15 @@ export function HomeCelebrations({ crocName, active }: { crocName: string; activ
         to={growTo}
         crocName={crocName}
         onDone={() => {
+          // The tab bar sits under this moment's button: swallow the rest of a double tap.
+          shield();
           void store.markStageSeen(growTo);
         }}
       />
     );
   }
-  if (weekDue) {
-    return (
-      <WeeklyReached
-        done={Math.min(days, target)}
-        total={target}
-        onClose={() => void store.markWeekCelebrated(week)}
-      />
-    );
+  if (toastWeek === week) {
+    return <WeeklyReached done={Math.min(days, target)} total={target} onClose={closeToast} />;
   }
   return null;
 }

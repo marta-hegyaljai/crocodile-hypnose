@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { t, type CopyKey } from '@/copy';
 import { space } from '@/theme';
-import { Button, IconButton, ProgressBar, Text } from '@/ui';
+import { Button, IconButton, ProgressBar, RadioGroup, Text } from '@/ui';
 
 import { BreathingVisual } from './BreathingVisual';
 import {
@@ -143,7 +143,12 @@ export function AudioPlayer({
             {choosing ? (
               // The sound choice takes the controls' row, so the dock keeps its height and never
               // grows over the breathing cue.
-              <View style={styles.sounds} accessibilityRole="radiogroup" testID={id('sounds')}>
+              <RadioGroup
+                label={t('player.sound')}
+                selectOnMove={false}
+                style={styles.sounds}
+                testID={id('sounds')}
+              >
                 {SOUNDSCAPES.map((s) => (
                   <Button
                     key={s}
@@ -160,7 +165,7 @@ export function AudioPlayer({
                     testID={id(`sound-${s}`)}
                   />
                 ))}
-              </View>
+              </RadioGroup>
             ) : (
               <View style={styles.controlRow}>
                 <IconButton

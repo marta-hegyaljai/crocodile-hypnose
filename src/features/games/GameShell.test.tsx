@@ -23,13 +23,16 @@ function StubGame({ running, ended, onFinish }: GameProps) {
         testID="stub-finish"
         onPress={() => onFinish({ gameId: 'breathing', breaths: 7 })}
       />
+      <Pressable
+        testID="stub-finish-idle"
+        onPress={() => onFinish({ gameId: 'breathing', breaths: 0 })}
+      />
     </>
   );
 }
 
 async function renderShell() {
   const onGameCompleted = jest.fn<void, [GameResult]>();
-  const onStarted = jest.fn();
   const onLeave = jest.fn();
   await render(
     <SafeAreaProvider initialMetrics={metrics}>
@@ -38,17 +41,34 @@ async function renderShell() {
         Game={StubGame}
         resultLabel={resultLabel}
         onGameCompleted={onGameCompleted}
-        onStarted={onStarted}
         onLeave={onLeave}
       />
     </SafeAreaProvider>,
   );
-  return { onGameCompleted, onStarted, onLeave };
+  return { onGameCompleted, onLeave };
 }
 
 describe('GameShell', () => {
+  it('does not count a round with no play in it, and offers another go', async () => {
+    const { onGameCompleted, onLeave } = await renderShell();
+    await fireEvent.press(screen.getByTestId('game-start'));
+    await fireEvent.press(screen.getByTestId('stub-finish-idle'));
+    expect(onGameCompleted).not.toHaveBeenCalled();
+    expect(screen.getByTestId('game-not-counted')).toBeTruthy();
+    expect(screen.queryByTestId('game-result')).toBeNull();
+    expect(screen.getByTestId('stub-state')).toHaveTextContent('ended');
+
+    await fireEvent.press(screen.getByTestId('game-play-again'));
+    expect(screen.queryByTestId('game-not-counted')).toBeNull();
+    await fireEvent.press(screen.getByTestId('stub-finish'));
+    expect(onGameCompleted).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId('game-result')).toHaveTextContent('7 breaths');
+    await fireEvent.press(screen.getByTestId('game-done'));
+    expect(onLeave).toHaveBeenCalledTimes(1);
+  });
+
   it('explains the game, starts it once, pauses and resumes, and leaves without penalty', async () => {
-    const { onStarted, onLeave, onGameCompleted } = await renderShell();
+    const { onLeave, onGameCompleted } = await renderShell();
     expect(screen.getByTestId('game-intro-title')).toHaveTextContent('Breathing');
     expect(screen.getByTestId('game-intro-howto')).toBeTruthy();
     expect(screen.getByTestId('stub-state')).toHaveTextContent('idle');
@@ -58,13 +78,16 @@ describe('GameShell', () => {
     expect(onLeave).toHaveBeenCalledTimes(1);
 
     await fireEvent.press(screen.getByTestId('game-start'));
-    expect(onStarted).toHaveBeenCalledTimes(1);
     expect(screen.getByTestId('stub-state')).toHaveTextContent('running');
     expect(screen.queryByTestId('game-intro')).toBeNull();
 
     await fireEvent.press(screen.getByTestId('game-pause'));
     expect(screen.getByTestId('game-paused')).toBeTruthy();
-    expect(screen.getByTestId('stub-state')).toHaveTextContent('idle');
+    // The pause card is modal: the game behind it is out of the accessibility tree.
+    expect(screen.queryByTestId('stub-state')).toBeNull();
+    expect(screen.getByTestId('stub-state', { includeHiddenElements: true })).toHaveTextContent(
+      'idle',
+    );
     await fireEvent.press(screen.getByTestId('game-resume'));
     expect(screen.getByTestId('stub-state')).toHaveTextContent('running');
 
@@ -77,7 +100,7 @@ describe('GameShell', () => {
   });
 
   it('shows the result once at the end and plays again from a clean start', async () => {
-    const { onStarted, onGameCompleted, onLeave } = await renderShell();
+    const { onGameCompleted, onLeave } = await renderShell();
     await fireEvent.press(screen.getByTestId('game-start'));
     await fireEvent.press(screen.getByTestId('stub-finish'));
     await fireEvent.press(screen.getByTestId('stub-finish')); // a double tap at the end
@@ -90,8 +113,6 @@ describe('GameShell', () => {
     await fireEvent.press(screen.getByTestId('game-play-again'));
     expect(screen.queryByTestId('game-end')).toBeNull();
     expect(screen.getByTestId('stub-state')).toHaveTextContent('running');
-    // Only the first start of the screen counts as "started".
-    expect(onStarted).toHaveBeenCalledTimes(1);
 
     await fireEvent.press(screen.getByTestId('stub-finish'));
     await fireEvent.press(screen.getByTestId('game-done'));

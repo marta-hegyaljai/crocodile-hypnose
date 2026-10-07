@@ -3,6 +3,7 @@ import React, { useCallback } from 'react';
 
 import { t } from '@/copy';
 import { GamesClearing, useGameRecords, type GameId } from '@/features/games';
+import { InactiveGuard } from '@/features/layout/InactiveGuard';
 import { useTapShield } from '@/features/layout/TapShield';
 import { useAuth } from '@/services/auth';
 import { useProfile } from '@/services/profile';
@@ -20,5 +21,9 @@ export default function GamesTab() {
     },
     [shield],
   );
-  return <GamesClearing records={records} crocName={crocName} onOpen={open} />;
+  return (
+    <InactiveGuard>
+      <GamesClearing records={records} crocName={crocName} onOpen={open} />
+    </InactiveGuard>
+  );
 }

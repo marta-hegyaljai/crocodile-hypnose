@@ -56,9 +56,33 @@ export function gameIdOfStop(stop: Pick<Stop, 'type' | 'mediaRef'>): GameId | un
 
 /** What a finished game reports to the shell (and later to the reward event). */
 export type GameResult =
-  | { gameId: 'stillness'; score: number }
+  | {
+      gameId: 'stillness';
+      score: number;
+      /** Samples taken: 0 when nothing was ever measured. */ samples?: number;
+    }
   | { gameId: 'firefly'; rounds: number; total: number }
   | { gameId: 'breathing'; breaths: number };
+
+/** Fewest breaths that count as having played Breathing (a few slow ones). */
+export const MIN_BREATHS = 2;
+/** Fewest stillness samples (a few seconds of resting) that count as having played Stillness. */
+export const MIN_STILLNESS_SAMPLES = 20;
+
+/**
+ * Whether the play was real: a game left idle runs to its end but must not count (no record, no
+ * points, no stop completed). Firefly asks for nothing but watching, so it always counts.
+ */
+export function isEngaged(result: GameResult): boolean {
+  switch (result.gameId) {
+    case 'stillness':
+      return result.samples === undefined || result.samples >= MIN_STILLNESS_SAMPLES;
+    case 'firefly':
+      return true;
+    case 'breathing':
+      return result.breaths >= MIN_BREATHS;
+  }
+}
 
 /** The number a result is ranked by (higher is better), for "best" on the clearing. */
 export function resultValue(result: GameResult): number {

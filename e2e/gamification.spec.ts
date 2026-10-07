@@ -168,6 +168,16 @@ test.describe('gamification', () => {
     await page.getByTestId('tab-games').click();
     await page.getByTestId('game-card-breathing').click();
     await page.getByTestId('game-start').click();
+    // A round only counts with some play in it: two held breaths (1.5 s of game time each).
+    await expect(page.getByTestId('breathing-water')).toBeVisible();
+    for (let i = 0; i < 2; i++) {
+      const box = await page.getByTestId('breathing-water').boundingBox();
+      await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2);
+      await page.mouse.down();
+      await page.waitForTimeout(140);
+      await page.mouse.up();
+      await page.waitForTimeout(60);
+    }
     await expect(page.getByTestId('game-end')).toBeVisible({ timeout: 20_000 });
     await page.getByTestId('game-done').click();
     await expect(page.getByTestId('games-screen')).toBeVisible();

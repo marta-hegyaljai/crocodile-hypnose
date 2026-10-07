@@ -4,6 +4,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { t } from '@/copy';
 import { useSubmit } from '@/features/auth/useSubmit';
+import { InactiveGuard } from '@/features/layout/InactiveGuard';
 import { useTapShield } from '@/features/layout/TapShield';
 import { ProfileHeader, ProfileSummaryCard, RenameCroc } from '@/features/profile/ProfileHeader';
 import { SettingsGate } from '@/features/profile/SettingsGate';
@@ -40,64 +41,71 @@ export default function ProfileTab() {
   };
 
   return (
-    <Screen testID="profile-screen" contentStyle={styles.screen}>
-      <View style={styles.column}>
-        <ProfileHeader />
-        {pendingOffline ? (
-          <Text variant="caption" tone="secondary" testID="profile-sync-pending">
-            {t('profile.syncPending')}
-          </Text>
-        ) : null}
-        <ProfileSummaryCard />
-        <SettingsGate>
-          <RenameCroc />
-          <ReminderSettings />
-          <PreferenceSettings />
-        </SettingsGate>
-        <View style={styles.links}>
-          <Text variant="subheading" heading={2} style={styles.linksTitle}>
-            {t('profile.moreTitle')}
-          </Text>
-          {(
-            [
-              ['help', '/settings/help', 'profile.helpLink', 'profile.helpLinkDetail'],
-              ['privacy', '/settings/privacy', 'profile.privacyLink', 'profile.privacyLinkDetail'],
-            ] as const
-          ).map(([id, href, label, detail]) => (
-            <Card
-              key={id}
-              tone="raised"
-              padding="md"
-              onPress={() => open(href)}
-              accessibilityLabel={`${t(label)}, ${t(detail)}`}
-              testID={`profile-${id}-link`}
-            >
-              <View style={styles.linkRow}>
-                <View style={styles.linkText}>
-                  <Text variant="bodyStrong">{t(label)}</Text>
-                  <Text variant="caption" tone="secondary">
-                    {t(detail)}
-                  </Text>
+    <InactiveGuard>
+      <Screen testID="profile-screen" contentStyle={styles.screen}>
+        <View style={styles.column}>
+          <ProfileHeader />
+          {pendingOffline ? (
+            <Text variant="caption" tone="secondary" testID="profile-sync-pending">
+              {t('profile.syncPending')}
+            </Text>
+          ) : null}
+          <ProfileSummaryCard />
+          <SettingsGate>
+            <RenameCroc />
+            <ReminderSettings />
+            <PreferenceSettings />
+          </SettingsGate>
+          <View style={styles.links}>
+            <Text variant="subheading" heading={2} style={styles.linksTitle}>
+              {t('profile.moreTitle')}
+            </Text>
+            {(
+              [
+                ['help', '/settings/help', 'profile.helpLink', 'profile.helpLinkDetail'],
+                [
+                  'privacy',
+                  '/settings/privacy',
+                  'profile.privacyLink',
+                  'profile.privacyLinkDetail',
+                ],
+              ] as const
+            ).map(([id, href, label, detail]) => (
+              <Card
+                key={id}
+                tone="raised"
+                padding="md"
+                onPress={() => open(href)}
+                accessibilityLabel={`${t(label)}, ${t(detail)}`}
+                testID={`profile-${id}-link`}
+              >
+                <View style={styles.linkRow}>
+                  <View style={styles.linkText}>
+                    <Text variant="bodyStrong">{t(label)}</Text>
+                    <Text variant="caption" tone="secondary">
+                      {t(detail)}
+                    </Text>
+                  </View>
+                  {/* A chevron: the card opens a page (the back icon, mirrored). */}
+                  <View style={styles.chevron}>
+                    <Icon name="back" size={20} color={colors.textSecondary} />
+                  </View>
                 </View>
-                {/* A chevron: the card opens a page (the back icon, mirrored). */}
-                <View style={styles.chevron}>
-                  <Icon name="back" size={20} color={colors.textSecondary} />
-                </View>
-              </View>
-            </Card>
-          ))}
+              </Card>
+            ))}
+          </View>
+          <Button
+            label={t('home.signOut')}
+            variant="secondary"
+            size="lg"
+            fullWidth
+            loading={signingOut.pending}
+            onPress={() => void signingOut.run()}
+            testID="profile-sign-out"
+          />
         </View>
-        <Button
-          label={t('home.signOut')}
-          variant="secondary"
-          size="lg"
-          fullWidth
-          loading={signingOut.pending}
-          onPress={() => void signingOut.run()}
-          testID="profile-sign-out"
-        />
-      </View>
-    </Screen>
+      </Screen>
+    </InactiveGuard>
   );
 }
 

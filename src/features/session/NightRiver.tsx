@@ -15,7 +15,7 @@ import { t } from '@/copy';
 import { EYE_STOPS, Lagoon, crocColors, useBreath } from '@/illustration';
 import { useReducedMotion } from '@/motion/MotionProvider';
 import { palette, radius, space, useTheme, withAlpha } from '@/theme';
-import { Button, Reveal, Screen, Text } from '@/ui';
+import { Button, Reveal, Screen, Text, useDialog } from '@/ui';
 
 /**
  * The Night River composition every session shares (designed for the onboarding first session,
@@ -294,8 +294,19 @@ export function EndSessionDialog({
   testIDPrefix: string;
 }) {
   const theme = useTheme();
+  // Focus goes in (to "keep going", the safe choice), Tab stays inside, Escape keeps going.
+  const { ref: dialogRef, props: dialogProps } = useDialog({ onClose: onKeepGoing, trap: true });
   return (
-    <View style={styles.confirmBackdrop} testID={`${testIDPrefix}-end-dialog`}>
+    <View
+      ref={dialogRef}
+      {...dialogProps}
+      accessibilityViewIsModal
+      aria-modal
+      role="dialog"
+      aria-label={t('player.endTitle')}
+      style={styles.confirmBackdrop}
+      testID={`${testIDPrefix}-end-dialog`}
+    >
       <Reveal style={styles.confirmWrap}>
         <View
           style={[
@@ -411,6 +422,7 @@ const styles = StyleSheet.create({
     backgroundColor: withAlpha(palette.nightRiver, 0.78),
   },
   confirmBackdrop: {
+    ...({ outlineWidth: 0 } as object),
     position: 'absolute',
     top: 0,
     left: 0,

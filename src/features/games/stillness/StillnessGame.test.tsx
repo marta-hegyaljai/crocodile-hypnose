@@ -56,7 +56,7 @@ describe('StillnessGame', () => {
     expect(onFinish).not.toHaveBeenCalled();
     await tickAt(STILLNESS_DURATION_MS + 100);
     expect(onFinish).toHaveBeenCalledTimes(1);
-    expect(onFinish).toHaveBeenCalledWith({ gameId: 'stillness', score: 100 });
+    expect(onFinish).toHaveBeenCalledWith({ gameId: 'stillness', score: 100, samples: 0 });
     // And only once.
     await tickAt(STILLNESS_DURATION_MS + 400);
     expect(onFinish).toHaveBeenCalledTimes(1);

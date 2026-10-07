@@ -1,4 +1,10 @@
-import { gameIdOfStop, resultValue } from './catalog';
+import {
+  MIN_BREATHS,
+  MIN_STILLNESS_SAMPLES,
+  gameIdOfStop,
+  isEngaged,
+  resultValue,
+} from './catalog';
 import {
   BREATH_PERIOD_MS,
   BreathCounter,
@@ -121,5 +127,37 @@ describe('catalog', () => {
     expect(resultValue({ gameId: 'stillness', score: 82 })).toBe(82);
     expect(resultValue({ gameId: 'firefly', rounds: 3, total: 3 })).toBe(3);
     expect(resultValue({ gameId: 'breathing', breaths: 7 })).toBe(7);
+  });
+});
+
+describe('minimum engagement', () => {
+  it('counts a breathing round only with real breaths', () => {
+    expect(isEngaged({ gameId: 'breathing', breaths: 0 })).toBe(false);
+    expect(isEngaged({ gameId: 'breathing', breaths: MIN_BREATHS - 1 })).toBe(false);
+    expect(isEngaged({ gameId: 'breathing', breaths: MIN_BREATHS })).toBe(true);
+  });
+
+  it('counts a stillness round only when something was measured', () => {
+    expect(isEngaged({ gameId: 'stillness', score: 100, samples: 0 })).toBe(false);
+    expect(isEngaged({ gameId: 'stillness', score: 100, samples: MIN_STILLNESS_SAMPLES - 1 })).toBe(
+      false,
+    );
+    expect(isEngaged({ gameId: 'stillness', score: 90, samples: MIN_STILLNESS_SAMPLES })).toBe(
+      true,
+    );
+    // Results stored before samples were reported still count.
+    expect(isEngaged({ gameId: 'stillness', score: 90 })).toBe(true);
+  });
+
+  it('always counts watching the firefly', () => {
+    expect(isEngaged({ gameId: 'firefly', rounds: 3, total: 3 })).toBe(true);
+  });
+
+  it('the tracker reports how many samples it took', () => {
+    const t = new StillnessTracker({ fullMotion: 1 });
+    expect(t.samples()).toBe(0);
+    t.addSample(0);
+    t.addSample(0.2);
+    expect(t.samples()).toBe(2);
   });
 });

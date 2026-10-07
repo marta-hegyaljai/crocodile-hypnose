@@ -49,6 +49,11 @@ export class StillnessTracker {
     return this.level_;
   }
 
+  /** How many samples were taken (0 when the finger never rested or the sensor stayed silent). */
+  samples(): number {
+    return this.count;
+  }
+
   score(): number {
     if (this.count === 0) return 100;
     return Math.round((this.sum / this.count) * 100);

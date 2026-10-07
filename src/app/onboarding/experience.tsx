@@ -11,7 +11,7 @@ import { useOnboardingActions, useStepScreen } from '@/features/onboarding/useOn
 import { useFeedback } from '@/services/feedback';
 import type { Experience, SessionLength, TimeOfDay } from '@/services/profile/types';
 import { space } from '@/theme';
-import { Button, Text } from '@/ui';
+import { Button, RadioGroup, Text } from '@/ui';
 
 const EXPERIENCE: { value: Experience; key: CopyKey }[] = [
   { value: 'new', key: 'onboarding.experience.new' },
@@ -68,7 +68,7 @@ export default function ExperienceScreen() {
         />
       }
     >
-      <View style={styles.group} accessibilityRole="radiogroup">
+      <RadioGroup label={t('onboarding.experience.experienceQuestion')} style={styles.group}>
         <Text variant="label" tone="secondary">
           {t('onboarding.experience.experienceQuestion')}
         </Text>
@@ -85,8 +85,8 @@ export default function ExperienceScreen() {
             />
           ))}
         </View>
-      </View>
-      <View style={styles.group} accessibilityRole="radiogroup">
+      </RadioGroup>
+      <RadioGroup label={t('onboarding.experience.timeQuestion')} style={styles.group}>
         <Text variant="label" tone="secondary">
           {t('onboarding.experience.timeQuestion')}
         </Text>
@@ -103,8 +103,8 @@ export default function ExperienceScreen() {
             />
           ))}
         </View>
-      </View>
-      <View style={styles.group} accessibilityRole="radiogroup">
+      </RadioGroup>
+      <RadioGroup label={t('onboarding.experience.lengthQuestion')} style={styles.group}>
         <Text variant="label" tone="secondary">
           {t('onboarding.experience.lengthQuestion')}
         </Text>
@@ -119,7 +119,7 @@ export default function ExperienceScreen() {
             testID={`length-${o.value}`}
           />
         ))}
-      </View>
+      </RadioGroup>
     </OnboardingScaffold>
   );
 }

@@ -8,7 +8,7 @@ import { useSubmit } from '@/features/auth/useSubmit';
 import { useAuth } from '@/services/auth';
 import { isAuthError } from '@/services/auth/types';
 import { space } from '@/theme';
-import { Button, Notice, Reveal, Text, TextField, moveFocus } from '@/ui';
+import { Button, Notice, Reveal, Text, TextField, moveFocus, useDialog } from '@/ui';
 
 /**
  * Delete account, behind an in-page confirmation and the password (recent authentication). The
@@ -62,6 +62,11 @@ export function DeleteAccount() {
     setPassword('');
     setProblem(null);
   };
+  // Escape backs out of the confirmation (never while the deletion is in flight).
+  const { ref: dialogRef, props: dialogProps } = useDialog({
+    onClose: confirming && !deleting.pending ? close : undefined,
+    autoFocus: false,
+  });
 
   if (!confirming) {
     return (
@@ -78,54 +83,56 @@ export function DeleteAccount() {
 
   const fieldProblem = problem?.key === 'account.deletePasswordRequired';
   return (
-    <Reveal style={styles.block} testID="delete-confirm">
-      <View ref={titleRef} tabIndex={-1} style={styles.focusTarget} testID="delete-confirm-title">
-        <Text variant="heading" heading={3} ref={titleTextRef}>
-          {t('account.deleteTitle')}
+    <View ref={dialogRef} {...dialogProps} style={styles.focusTarget}>
+      <Reveal style={styles.block} testID="delete-confirm">
+        <View ref={titleRef} tabIndex={-1} style={styles.focusTarget} testID="delete-confirm-title">
+          <Text variant="heading" heading={3} ref={titleTextRef}>
+            {t('account.deleteTitle')}
+          </Text>
+        </View>
+        <Text variant="body" tone="secondary">
+          {t('account.deleteBody')}
         </Text>
-      </View>
-      <Text variant="body" tone="secondary">
-        {t('account.deleteBody')}
-      </Text>
-      <TextField
-        label={t('account.deletePasswordLabel')}
-        hint={t('account.deletePasswordHint')}
-        secure
-        value={password}
-        onChangeText={(value) => {
-          setPassword(value);
-          if (problem) setProblem(null);
-        }}
-        error={fieldProblem ? t('account.deletePasswordRequired') : null}
-        autoComplete="current-password"
-        textContentType="password"
-        returnKeyType="done"
-        onSubmitEditing={() => void deleting.run()}
-        disabled={deleting.pending}
-        testID="delete-password"
-      />
-      {problem && !fieldProblem ? (
-        <Notice tone="error" message={t(problem.key, problem.params)} testID="delete-error" />
-      ) : null}
-      {/* The safe choice comes first in reading and tab order. */}
-      <Button
-        label={t('account.deleteCancel')}
-        variant="secondary"
-        size="lg"
-        fullWidth
-        disabled={deleting.pending}
-        onPress={close}
-        testID="delete-cancel"
-      />
-      <Button
-        label={t('account.deleteConfirm')}
-        variant="danger"
-        fullWidth
-        loading={deleting.pending}
-        onPress={() => void deleting.run()}
-        testID="delete-confirm-button"
-      />
-    </Reveal>
+        <TextField
+          label={t('account.deletePasswordLabel')}
+          hint={t('account.deletePasswordHint')}
+          secure
+          value={password}
+          onChangeText={(value) => {
+            setPassword(value);
+            if (problem) setProblem(null);
+          }}
+          error={fieldProblem ? t('account.deletePasswordRequired') : null}
+          autoComplete="current-password"
+          textContentType="password"
+          returnKeyType="done"
+          onSubmitEditing={() => void deleting.run()}
+          disabled={deleting.pending}
+          testID="delete-password"
+        />
+        {problem && !fieldProblem ? (
+          <Notice tone="error" message={t(problem.key, problem.params)} testID="delete-error" />
+        ) : null}
+        {/* The safe choice comes first in reading and tab order. */}
+        <Button
+          label={t('account.deleteCancel')}
+          variant="secondary"
+          size="lg"
+          fullWidth
+          disabled={deleting.pending}
+          onPress={close}
+          testID="delete-cancel"
+        />
+        <Button
+          label={t('account.deleteConfirm')}
+          variant="danger"
+          fullWidth
+          loading={deleting.pending}
+          onPress={() => void deleting.run()}
+          testID="delete-confirm-button"
+        />
+      </Reveal>
+    </View>
   );
 }
 
