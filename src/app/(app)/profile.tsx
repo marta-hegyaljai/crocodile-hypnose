@@ -6,6 +6,7 @@ import { t } from '@/copy';
 import { useSubmit } from '@/features/auth/useSubmit';
 import { useTapShield } from '@/features/layout/TapShield';
 import { ProfileHeader, ProfileSummaryCard, RenameCroc } from '@/features/profile/ProfileHeader';
+import { SettingsGate } from '@/features/profile/SettingsGate';
 import { PreferenceSettings, ReminderSettings } from '@/features/profile/SettingsSections';
 import { useAuth } from '@/services/auth';
 import { isAuthError } from '@/services/auth/types';
@@ -47,9 +48,11 @@ export default function ProfileTab() {
           </Text>
         ) : null}
         <ProfileSummaryCard />
-        <RenameCroc />
-        <ReminderSettings />
-        <PreferenceSettings />
+        <SettingsGate>
+          <RenameCroc />
+          <ReminderSettings />
+          <PreferenceSettings />
+        </SettingsGate>
         <View style={styles.links}>
           <Text variant="subheading" heading>
             {t('profile.moreTitle')}

@@ -3,7 +3,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { t } from '@/copy';
 import { localContent } from '@/content/repository';
-import { CROC_NAME_PROBLEM_COPY, checkCrocName } from '@/features/onboarding/flow';
+import { checkCrocName, crocNameProblemText } from '@/features/onboarding/flow';
 import { useJourney } from '@/features/home/useJourney';
 import { Croc } from '@/illustration';
 import { useAuth } from '@/services/auth';
@@ -100,7 +100,7 @@ export function RenameCroc() {
 
   const check = checkCrocName(text);
   const [touched, setTouched] = useState(false);
-  const problem = touched && !check.ok ? t(CROC_NAME_PROBLEM_COPY[check.problem]) : null;
+  const problem = touched && !check.ok ? crocNameProblemText(check.problem) : null;
   const unchanged = check.ok && check.name === saved;
 
   const save = () => {

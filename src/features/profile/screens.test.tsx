@@ -33,11 +33,12 @@ const metrics = {
 let auth: AuthStore;
 let profile: ProfileStore;
 let client: FakeProfileClient;
+let session: ReturnType<typeof createSessionManager>;
 
 beforeEach(async () => {
   jest.clearAllMocks();
   const authClient = createFakeAuthClient();
-  const session = createSessionManager({
+  session = createSessionManager({
     client: authClient,
     store: createSessionStore(memoryStorage()),
   });
@@ -96,10 +97,40 @@ describe('profile tab', () => {
     await press('profile-name-save');
     expect(screen.getByTestId('profile-name-error')).toBeOnTheScreen();
     expect(settings().crocName).toBe('Snap');
+    await type('profile-name', 'Z'.repeat(21));
+    await press('profile-name-save');
+    expect(screen.getByTestId('profile-name-error')).toHaveTextContent(
+      'Use at most 20 characters.',
+    );
     await type('profile-name', '  Zed   Z ');
     await press('profile-name-save');
     expect(settings().crocName).toBe('Zed Z');
     expect(screen.getByTestId('profile-name-saved')).toBeOnTheScreen();
+  });
+
+  it('shows the settings only once the user settings are in (never the defaults)', async () => {
+    client.seed('user-1', 'settings', { ...settings(), sound: false });
+    await profile.getState().reset();
+    const hold = client.hold();
+    const storage = memoryStorage();
+    storage.data.set(
+      'mhp.hypnose.onboarding.v1.user-1',
+      JSON.stringify({ ...profile.getState().onboarding, step: 'done', completed: true }),
+    );
+    profile = createProfileStore({
+      client,
+      session,
+      storage,
+      debounceMs: 0,
+    });
+    await profile.getState().load('user-1');
+    await show(ProfileTab);
+    expect(screen.getByTestId('settings-loading')).toBeOnTheScreen();
+    expect(screen.queryByTestId('setting-sound')).toBeNull();
+    expect(screen.queryByTestId('profile-name')).toBeNull();
+    await act(async () => hold.release());
+    await waitFor(() => expect(screen.getByTestId('setting-sound')).toBeOnTheScreen());
+    expect(screen.queryByTestId('settings-loading')).toBeNull();
   });
 
   it('every toggle takes effect at once', async () => {

@@ -72,7 +72,28 @@ export interface SettingsDoc extends SyncedDocument {
   haptics: boolean;
   /** Reduced-motion override: true reduces, false forces full motion, null/absent follows the device. */
   reducedMotion?: boolean | null;
+  /**
+   * When each field was last changed, and the `updatedAt` these stamps belong to (see
+   * `mergeSettings`). Absent in a document from an older app version.
+   */
+  fieldsAt?: SettingsStamps;
 }
+
+/** The user-editable settings fields; each is merged on its own. Mirrors the server. */
+export const SETTINGS_FIELDS = [
+  'crocName',
+  'goals',
+  'experience',
+  'sessionLength',
+  'reminder',
+  'moodConsent',
+  'safety',
+  'sound',
+  'haptics',
+  'reducedMotion',
+] as const;
+export type SettingsField = (typeof SETTINGS_FIELDS)[number];
+export type SettingsStamps = { doc: number } & Record<SettingsField, number>;
 
 export function defaultOnboarding(updatedAt = 0): OnboardingDoc {
   return {
@@ -185,9 +206,15 @@ export function isSettingsDoc(value: unknown): value is SettingsDoc {
     isBool(safety.cautionMode) &&
     isBool(value.sound) &&
     isBool(value.haptics) &&
-    (value.reducedMotion === undefined || isNullableBool(value.reducedMotion))
+    (value.reducedMotion === undefined || isNullableBool(value.reducedMotion)) &&
+    (value.fieldsAt === undefined || isStamps(value.fieldsAt))
   );
 }
+
+const isStamps = (v: unknown): v is SettingsStamps =>
+  isRecord(v) &&
+  ['doc', ...SETTINGS_FIELDS].every((f) => isInt(v[f], 0, Number.MAX_SAFE_INTEGER)) &&
+  Object.keys(v).length === SETTINGS_FIELDS.length + 1;
 
 /** Drops server-only fields from a received document so it can be written back as it is. */
 export function stripServerFields<T extends SyncedDocument>(doc: T & { storedAt?: unknown }): T {

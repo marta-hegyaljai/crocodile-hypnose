@@ -134,7 +134,6 @@ describe('mood consent', () => {
     const { client, device } = await setup();
     const phone = device();
     await phone.getState().load('user-1', { fresh: true });
-    expect(phone.getState().settingsKnown).toBe(false);
     await phone.getState().updateOnboarding((d) => ({
       ...d,
       moodConsent: true,
@@ -142,6 +141,57 @@ describe('mood consent', () => {
     }));
     expect(phone.getState().onboarding.firstSession.moodBefore).toBe(3);
     expect(client.calls.deleteMood).toBe(0);
+  });
+
+  it('a stale copy that says off and changes another field neither withdraws nor deletes', async () => {
+    const { client, device } = await setup();
+    const phone = device();
+    const tablet = device();
+    await tablet.getState().load('user-1', { fresh: true });
+    await tablet.getState().updateSettings((d) => ({ ...d, sound: true, crocName: 'Snap' }));
+    await settle();
+    // The phone turns consent on and records a mood; the tablet never hears of it.
+    await phone.getState().load('user-1');
+    await settle();
+    await phone.getState().setMoodConsent(true);
+    await phone.getState().recordMood(mood('mood-0000001'));
+    await settle();
+    // The tablet, still holding consent off, turns the sound off.
+    await tablet.getState().updateSettings((d) => ({ ...d, sound: false }));
+    await settle();
+    expect(client.documents.get('user-1:settings')).toMatchObject({
+      moodConsent: true,
+      sound: false,
+    });
+    expect(client.calls.deleteMood).toBe(0);
+    expect(client.streams.get('user-1:mood')).toHaveLength(1);
+    // Both copies end up agreeing, and the tablet keeps the phone's consent.
+    expect(tablet.getState().settings.moodConsent).toBe(true);
+    await phone.getState().load('user-1');
+    await settle();
+    expect(phone.getState().settings).toMatchObject({ moodConsent: true, sound: false });
+    expect(Object.keys(phone.getState().moods.items)).toEqual(['mood-0000001']);
+  });
+
+  it('a stale copy that says on never grants consent again', async () => {
+    const { client, device } = await setup();
+    const phone = device();
+    const tablet = device();
+    await withConsent(phone);
+    await tablet.getState().load('user-1');
+    await settle();
+    await phone.getState().setMoodConsent(false);
+    await settle();
+    // The tablet still holds consent on and changes the haptics.
+    await tablet.getState().updateSettings((d) => ({ ...d, haptics: false }));
+    await settle();
+    expect(client.documents.get('user-1:settings')).toMatchObject({
+      moodConsent: false,
+      haptics: false,
+    });
+    // The tablet learns of the withdrawal from the server's answer and drops its moods.
+    expect(tablet.getState().settings.moodConsent).toBe(false);
+    expect(Object.keys(tablet.getState().moods.items)).toEqual([]);
   });
 
   it('exports the stored data as JSON after sending pending changes', async () => {

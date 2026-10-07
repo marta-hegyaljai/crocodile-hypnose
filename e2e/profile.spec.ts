@@ -142,6 +142,11 @@ test.describe('profile and settings', () => {
     await expect(page.getByTestId('profile-summary')).toBeVisible();
     await expect(page.getByTestId('profile-stat-sessions')).toHaveText('0');
 
+    // Too long: the limit is named, not a template placeholder.
+    await page.getByTestId('profile-name').fill('R'.repeat(21));
+    await page.getByTestId('profile-name-save').click();
+    await expect(page.getByTestId('profile-name-error')).toHaveText('Use at most 20 characters.');
+
     await page.getByTestId('profile-name').fill('  Rio  ');
     await page.getByTestId('profile-name-save').click();
     await expect(page.getByTestId('profile-name-saved')).toBeVisible();

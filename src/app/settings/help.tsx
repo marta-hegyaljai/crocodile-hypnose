@@ -3,6 +3,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { t } from '@/copy';
 import { SafetyRetake } from '@/features/profile/SafetyRetake';
+import { SettingsGate } from '@/features/profile/SettingsGate';
 import { SubPage } from '@/features/profile/SubPage';
 import { space } from '@/theme';
 import { Card, Text } from '@/ui';
@@ -48,7 +49,9 @@ export default function HelpScreen() {
       <Text variant="caption" tone="secondary" testID="help-therapy-note">
         {t('help.therapyNote')}
       </Text>
-      <SafetyRetake />
+      <SettingsGate>
+        <SafetyRetake />
+      </SettingsGate>
     </SubPage>
   );
 }

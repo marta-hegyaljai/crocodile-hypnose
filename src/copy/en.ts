@@ -399,6 +399,7 @@ export const en = {
     privacyLink: 'Privacy and your data',
     privacyLinkDetail: 'What is stored, export, delete account',
     syncPending: 'Saved on this device. It will sync when you are online.',
+    settingsLoading: 'Loading your settings. They can be changed once they are here.',
     on: 'On',
     off: 'Off',
   },

@@ -25,6 +25,7 @@ import { defaultProgress, isProgressDoc, type ProgressDoc } from '@/services/pro
 
 import { createDocumentStore, type DocumentState } from './documentStore';
 import { mergeOnboarding } from './mergeOnboarding';
+import { mergeSettings, stampSettings } from './mergeSettings';
 import type { ProfileClient, StreamKind, StreamTypes } from './profileClient';
 import {
   defaultOnboarding,
@@ -136,6 +137,9 @@ export function createProfileStore({
     validate: isSettingsDoc,
     fetch: () => withToken((token) => client.get('settings', token)),
     push: (_user, doc) => withToken((token) => client.put('settings', doc, token)),
+    // Field by field, on the device and on the server: a change touches only its own fields.
+    merge: mergeSettings,
+    stamp: stampSettings,
     now,
     debounceMs,
     retryMs,
@@ -176,6 +180,8 @@ export function createProfileStore({
   const moods = eventLog('mood', MOODS_KEY, isMoodEntry);
   const docs = [onboarding, settings, progress, sessions, moods] as const;
   let generation = 0;
+  /** The mood consent the settings last showed for this user (null until they are known). */
+  let lastConsent: boolean | null = null;
 
   const store = createStore<ProfileState>()((set, get) => {
     const mirror = () => {
@@ -189,30 +195,42 @@ export function createProfileStore({
         moods: m.doc,
         onboarding: o.doc,
         settings: s.doc,
-        settingsKnown: s.source !== 'none',
+        settingsKnown: s.seeded,
         progress: p.doc,
         dirty: o.dirty || s.dirty || p.dirty || e.dirty || m.dirty,
         syncError: o.syncError ?? s.syncError ?? p.syncError ?? e.syncError ?? null,
         loadError: get().status === 'loading' ? (o.syncError ?? null) : null,
       });
     };
-    /**
-     * Mood data exists only while the user agrees (health data). Whenever the settings say no,
-     * whatever mood data this device holds goes: after a withdrawal here, on another device or tab,
-     * or from a server copy that arrives late.
-     */
-    const enforceMoodConsent = () => {
-      const s = settings.getState();
-      if (s.source === 'none' || s.doc.moodConsent) return;
+    /** Deletes the mood data this device holds: the check-ins and the onboarding moods. */
+    const scrubMoods = () => {
       const m = moods.getState();
       if (Object.keys(m.doc.items).length > 0) void m.update(() => emptyLog());
       const o = onboarding.getState().doc;
-      if (o.firstSession.moodBefore !== null || o.firstSession.moodAfter !== null) {
+      if (
+        o.firstSession.moodBefore !== null ||
+        o.firstSession.moodAfter !== null ||
+        o.moodConsent === true
+      ) {
         void onboarding.getState().update((doc) => ({
           ...doc,
+          moodConsent: false,
           firstSession: { ...doc.firstSession, moodBefore: null, moodAfter: null },
         }));
       }
+    };
+    /**
+     * Mood data exists only while the user agrees (health data). When the settings' consent goes
+     * from on to off, whatever mood data this device holds goes: after a withdrawal here, on
+     * another device or tab, or in a server copy that arrives late. Only on that change: the
+     * settings merge field by field, so an older copy that says off never gets here by itself.
+     */
+    const enforceMoodConsent = () => {
+      const s = settings.getState();
+      if (!s.seeded) return;
+      const was = lastConsent;
+      lastConsent = s.doc.moodConsent;
+      if (was === true && !s.doc.moodConsent) scrubMoods();
     };
     const onChange = () => {
       enforceMoodConsent();
@@ -240,6 +258,7 @@ export function createProfileStore({
       async load(userId, { fresh = false } = {}) {
         generation += 1;
         const startedIn = generation;
+        lastConsent = null;
         set({ status: 'loading', userId, loadError: null });
         // The device copies first: with one, routing can proceed and the server check follows.
         await Promise.all(docs.map((d) => d.getState().load(userId, { fresh })));
@@ -261,10 +280,13 @@ export function createProfileStore({
       recordMood: (entry) => moods.getState().update((doc) => addToLog(doc, entry)),
 
       async setMoodConsent(enabled) {
+        // Shown and changed only once the user's own settings are in (never on the defaults).
+        if (!settings.getState().seeded) return;
         await settings
           .getState()
           .update((doc) => (doc.moodConsent === enabled ? doc : { ...doc, moodConsent: enabled }));
         if (enabled) return;
+        scrubMoods();
         // The settings reach the server first (it purges mood data when it stores them), then the
         // explicit delete. A later "on" must not be undone by a late delete, hence the check.
         await settings.getState().flush();
@@ -292,6 +314,7 @@ export function createProfileStore({
 
       async reset() {
         generation += 1;
+        lastConsent = null;
         await Promise.all(docs.map((d) => d.getState().reset()));
         set({ status: 'idle', userId: null, dirty: false, syncError: null, loadError: null });
       },

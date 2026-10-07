@@ -1,6 +1,6 @@
 /**
  * Test double for the profile transport: an in-memory ProfileClient with the dev server's
- * last-write-wins behaviour, per user (the access token stands for the user, as the fake auth
+ * merge behaviour (last write wins; settings field by field; progress per stop), per user (the access token stands for the user, as the fake auth
  * client issues `access-N` tokens; pass a `userOf` mapping when that matters).
  */
 import { AuthError } from '@/services/auth/types';
@@ -10,7 +10,8 @@ import type {
   StreamKind,
   StreamTypes,
 } from '@/services/profile/profileClient';
-import type { DocumentKind } from '@/services/profile/types';
+import { mergeSettings } from '@/services/profile/mergeSettings';
+import type { DocumentKind, SettingsDoc } from '@/services/profile/types';
 import { mergeProgress } from '@/services/progress/mergeProgress';
 import type { ProgressDoc } from '@/services/progress/types';
 
@@ -125,6 +126,12 @@ export function createFakeProfileClient(
         const merged = current
           ? mergeProgress(current as ProgressDoc, doc as ProgressDoc)
           : (doc as ProgressDoc);
+        documents.set(key, merged);
+        return { ...merged } as DocumentTypes[typeof kind];
+      }
+      if (kind === 'settings') {
+        // The server merges settings field by field.
+        const merged = mergeSettings((current ?? doc) as SettingsDoc, doc as SettingsDoc);
         documents.set(key, merged);
         return { ...merged } as DocumentTypes[typeof kind];
       }

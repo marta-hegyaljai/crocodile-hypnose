@@ -5,6 +5,7 @@ import {
   bodySchemaFor,
   checkDocumentRules,
   DOCUMENT_KINDS,
+  moodConsentWithdrawn,
   PROGRESS_BODY_LIMIT,
   resolveDocument,
   withoutMoods,
@@ -94,7 +95,13 @@ export async function meRoutes(
       async (req) => {
         const { user } = await service.authenticate(bearer(req));
         const at = now();
-        const data = checkDocumentRules(kind as DocumentKind, req.body, at);
+        let data = checkDocumentRules(kind as DocumentKind, req.body, at);
+        if (kind === 'onboarding') {
+          // Consent withdrawn in the settings: a stale copy's moods are not stored (and not
+          // refused either, so that device does not retry forever; it takes the scrubbed copy).
+          const settings = await repo.getDocument(user.id, 'settings');
+          if (settings && moodConsentWithdrawn(settings.data)) data = withoutMoods(data) ?? data;
+        }
         const incoming = {
           userId: user.id,
           kind,
@@ -103,13 +110,18 @@ export async function meRoutes(
           updatedAt: data.updatedAt as number,
           storedAt: at,
         };
+        let consentBefore = null as boolean | null;
         const stored = await repo.putDocument(incoming, (current) => {
+          consentBefore = current ? current.data.moodConsent === true : null;
           const resolved = resolveDocument(kind as DocumentKind, current?.data ?? null, data);
-          return resolved ? { ...incoming, data: resolved } : null;
+          return resolved
+            ? { ...incoming, updatedAt: Number(resolved.updatedAt), data: resolved }
+            : null;
         });
-        // Withdrawn consent: whatever mood data is still stored goes with it, even when the
-        // app's own delete call never arrived (offline, closed).
-        if (kind === 'settings' && stored.data.moodConsent === false) {
+        // Consent withdrawn by this write: whatever mood data is still stored goes with it, even
+        // when the app's own delete call never arrived (offline, closed). Only on the change
+        // itself: a write that leaves consent off (or a stale copy that says off) purges nothing.
+        if (kind === 'settings' && consentBefore !== false && moodConsentWithdrawn(stored.data)) {
           await purgeMood(user.id);
         }
         return { [kind]: wire(stored) };
@@ -127,7 +139,7 @@ export async function meRoutes(
     if (onboarding && withoutMoods(onboarding.data)) {
       await repo.putDocument(onboarding, (current) => {
         const data = current ? withoutMoods(current.data) : null;
-        return current && data ? { ...current, data } : null;
+        return current && data ? { ...current, updatedAt: Number(data.updatedAt), data } : null;
       });
     }
   }
